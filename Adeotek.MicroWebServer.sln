@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30011.22
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.MicroWebServer", "src\Adeotek.MicroWebServer\Adeotek.MicroWebServer.csproj", "{B32E9480-2740-4767-8A54-3DA3633B575E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.MicroWebServer.Example", "src\Adeotek.MicroWebServer.Example\Adeotek.MicroWebServer.Example.csproj", "{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B32E9480-2740-4767-8A54-3DA3633B575E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B32E9480-2740-4767-8A54-3DA3633B575E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B32E9480-2740-4767-8A54-3DA3633B575E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B32E9480-2740-4767-8A54-3DA3633B575E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3E3DE99F-5450-467C-8870-825BC996FB5F}
+	EndGlobalSection
+EndGlobal
