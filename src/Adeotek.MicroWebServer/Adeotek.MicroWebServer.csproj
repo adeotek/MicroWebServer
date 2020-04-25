@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Adeotek.MicroWebServer</AssemblyName>
+    <PackageId>Adeotek.MicroWebServer</PackageId>
+    <PackageTags>http,webserver,embedded,micro</PackageTags>
+    <title>Adeotek.MicroWebServer</title>
+    <Description>A .Net Core embeddable micro web server</Description>
+    <PackageProjectUrl>https://github.com/adeotek/MicroWebServer</PackageProjectUrl>
+    <PackageLicense>https://github.com/adeotek/MicroWebServer/blob/master/LICENSE</PackageLicense>
+    <Authors>George Benjamin-Schonberger</Authors>
+    <Company>George Benjamin-Schonberger</Company>
+    <Copyright>George Benjamin-Schonberger 2020</Copyright>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <FileVersion>1.0.0.1</FileVersion>
+    <PackageIcon>logo_128_128.png</PackageIcon>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <OutputType>Library</OutputType>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <MinVerVerbosity>diag</MinVerVerbosity>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerSkip Condition="'$(Configuration)' == 'Debug'">true</MinVerSkip>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../assets/logo_128_128.png" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0-preview.3.20215.2" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="MinVer" Version="2.2.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
