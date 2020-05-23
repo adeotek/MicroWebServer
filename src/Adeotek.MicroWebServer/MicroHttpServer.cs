@@ -22,29 +22,28 @@ namespace Adeotek.MicroWebServer
         private HttpListener _listener;
         private Func<HttpListenerRequest, string> _responderMethod;
 
-        public ResponseTypes ResponseType;
-        public bool UTF8;
-        public List<string> CrossDomains;
-        public bool SendChunked;
-        public bool IsRunning { get; private set; } = false;
-
+        public ResponseTypes ResponseType { get; set; }
+        public bool UTF8 { get; set; }
+        public ICollection<string> CrossDomains { get; set; }
+        public bool SendChunked { get; set; }
+        public bool IsRunning { get; private set; }
 
         public MicroHttpServer(
             Func<HttpListenerRequest, string> requestResponderMethod,
-            List<string> routes = null,
+            IReadOnlyCollection<string> routes = null,
             string host = "localhost",
             int port = 80,
             ResponseTypes responseType = ResponseTypes.Text,
             bool utf8 = true,
-            List<string> crossDomains = null,
+            ICollection<string> crossDomains = null,
             bool sendChunked = false,
-            List<string> fullRoutes = null,
+            IReadOnlyCollection<string> fullRoutes = null,
             ILogger logger = null
             )
         {
             if (!HttpListener.IsSupported)
             {
-                throw new NotSupportedException("HttpListner is not supported.");
+                throw new NotSupportedException("HttpListener is not supported.");
             }
             _logger = logger;
             var prefixes = new List<string>();
@@ -56,7 +55,7 @@ namespace Adeotek.MicroWebServer
                     {
                         continue;
                     }
-                    var route = string.Format("http://{0}:{1}/{2}", host, port, r.TrimStart('/'));
+                    var route = $"http://{host}:{port}/{r.TrimStart('/')}";
                     if (prefixes.Contains(route))
                     {
                         continue;
@@ -66,7 +65,7 @@ namespace Adeotek.MicroWebServer
             }
             else
             {
-                prefixes.Add(string.Format("http://{0}:{1}/", host, port));
+                prefixes.Add($"http://{host}:{port}/");
             }
             if (fullRoutes != null && fullRoutes.Count > 0)
             {
@@ -86,12 +85,8 @@ namespace Adeotek.MicroWebServer
                 throw new ArgumentException("No URI prefixes provided.");
             }
             _listener = new HttpListener();
-            foreach (var s in prefixes)
+            foreach (var s in prefixes.Where(s => !string.IsNullOrEmpty(s)))
             {
-                if (string.IsNullOrEmpty(s))
-                {
-                    continue;
-                }
                 _listener.Prefixes.Add(s);
             }
             _responderMethod = requestResponderMethod ?? throw new ArgumentException("Invalid request responder method.");
@@ -103,10 +98,7 @@ namespace Adeotek.MicroWebServer
 
         public void Start()
         {
-            if (_logger != null)
-            {
-                _logger.LogDebug("Webserver is starting...");
-            }
+            _logger?.LogDebug("Web server is starting...");
             try
             {
                 _listener.Start();
@@ -115,11 +107,11 @@ namespace Adeotek.MicroWebServer
                 {
                     try
                     {
-                        _logger.LogInformation("Webserver is listening on: {routes}", string.Join("\n\t", _listener.Prefixes.ToArray<string>()));
+                        _logger.LogInformation("Web server is listening on: {routes}", string.Join("\n\t", _listener.Prefixes.ToArray<string>()));
                     }
                     catch
                     {
-                        // supress exceptions
+                        // suppress exceptions
                     }
                 }
             }
@@ -145,23 +137,20 @@ namespace Adeotek.MicroWebServer
                             {
                                 // Set response custom headers
                                 ProcessResponseHeaders(ref ctx);
-                                string rstr = _responderMethod(ctx.Request);
-                                byte[] buf = Encoding.UTF8.GetBytes(rstr);
+                                var responseString = _responderMethod(ctx.Request);
+                                var buf = Encoding.UTF8.GetBytes(responseString);
                                 ctx.Response.ContentLength64 = buf.Length;
                                 ctx.Response.OutputStream.Write(buf, 0, buf.Length);
                             }
                             catch (Exception exx)
                             {
                                 // suppress any exceptions and send it to logger object
-                                if (_logger != null)
-                                {
-                                    _logger.LogWarning(exx, "Exception cauth and supressed while listening.");
-                                }
+                                _logger?.LogWarning(exx, "Exception cauth and supressed while listening.");
                             }
                             finally
                             {
                                 // always close the stream
-                                ctx.Response.OutputStream.Close();
+                                ctx?.Response.OutputStream.Close();
                             }
                         }, _listener.GetContext());
                     }
@@ -169,30 +158,21 @@ namespace Adeotek.MicroWebServer
                 catch (Exception ex)
                 {
                     // suppress any exceptions and send it to logger object
-                    if (_logger != null)
-                    {
-                        _logger.LogWarning(ex, "Exception cauth and supressed.");
-                    }
+                    _logger?.LogWarning(ex, "Exception caught and suppressed.");
                 }
             });
         }
 
         public void Stop()
         {
-            if (_logger != null)
-            {
-                _logger.LogDebug("Webserver is stopping...");
-            }
+            _logger?.LogDebug("Web server is stopping...");
             IsRunning = false;
             if (_listener.IsListening)
             {
                 _listener.Stop();
             }
             _listener.Close();
-            if (_logger != null)
-            {
-                _logger.LogInformation("Webserver not listening anymore!");
-            }
+            _logger?.LogInformation("Web server not listening anymore!");
         }
 
         public virtual void Dispose()
@@ -212,7 +192,7 @@ namespace Adeotek.MicroWebServer
             {
                 return;
             }
-            string charset = string.Empty;
+            var charset = string.Empty;
             if (UTF8)
             {
                 charset = "; charset=utf-8";
@@ -220,30 +200,20 @@ namespace Adeotek.MicroWebServer
             }
             else if (CrossDomains != null && CrossDomains.Count > 0)
             {
-                foreach (var d in CrossDomains)
+                foreach (var d in CrossDomains.Where(d => !string.IsNullOrEmpty(d)))
                 {
-                    if (string.IsNullOrEmpty(d))
-                    {
-                        continue;
-                    }
                     context.Response.Headers.Add("Access-Control-Allow-Origin: " + d + ";");
                 }
             }
-            switch (ResponseType)
+
+            context.Response.ContentType = ResponseType switch
             {
-                case ResponseTypes.Text:
-                    context.Response.ContentType = "text/plain" + charset;
-                    break;
-                case ResponseTypes.Html:
-                    context.Response.ContentType = "text/html" + charset;
-                    break;
-                case ResponseTypes.Json:
-                    context.Response.ContentType = "application/json" + charset;
-                    break;
-                case ResponseTypes.Jsonp:
-                    context.Response.ContentType = "application/json" + charset;
-                    break;
-            }
+                ResponseTypes.Text => "text/plain" + charset,
+                ResponseTypes.Html => "text/html" + charset,
+                ResponseTypes.Json => "application/json" + charset,
+                ResponseTypes.Jsonp => "application/json" + charset,
+                _ => context.Response.ContentType
+            };
             context.Response.SendChunked = SendChunked;
         }
     }
