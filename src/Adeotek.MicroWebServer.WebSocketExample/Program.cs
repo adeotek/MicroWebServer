@@ -1,12 +1,13 @@
 ﻿using System;
-using Adeotek.MicroWebServer.Network;
+using System.Text;
+using Adeotek.MicroWebServer.WebSocket;
 using Microsoft.Extensions.Logging;
 
 namespace Adeotek.MicroWebServer.WebSocketExample
 {
     class Program
     {
-        static ILogger logger;
+        static ILogger _logger;
 
         static void Main(string[] args)
         {
@@ -18,36 +19,32 @@ namespace Adeotek.MicroWebServer.WebSocketExample
                     .AddFilter("System", LogLevel.Warning)
                     .AddConsole();
             });
-            logger = loggerFactory.CreateLogger<Program>();
+            _logger = loggerFactory.CreateLogger<Program>();
 
-            logger.LogInformation("Logger started...");
+            _logger.LogInformation("Logger started...");
 
             // WebSocket server port
-            int port = 8080;
-            if (args.Length > 0)
-                port = int.Parse(args[0]);
-            // WebSocket server content path
-            string www = "../../../../../www/ws";
-            if (args.Length > 1)
-                www = args[1];
-
-            Console.WriteLine($"WebSocket server port: {port}");
-            Console.WriteLine($"WebSocket server static content path: {www}");
-            Console.WriteLine($"WebSocket server website: http://localhost:{port}/chat/index.html");
-
-            Console.WriteLine();
+            var ip = "127.0.0.1";
+            var port = 8080;
 
             // Create a new WebSocket server
-            var server = new WebSocketServer("127.0.0.1", port, logger: logger);
-            server.OnMessageReceived += OnMessageReceived;
-            //server.AddStaticContent(www, "/chat");
+            //var server = new WebSocketServer("127.0.0.1", port, logger: logger);
+            //server.OnMessageReceived += OnMessageReceived;
+            var server = new Server(ip, port);
+            server.OnMessageReceived += OnWsReceived;
+            server.OnServerError += OnError;
+            server.OnSessionError += OnError;
+            server.OnSessionConnected += OnWsConnected;
+            server.OnSessionDisconnected += OnWsDisconnected;
 
+            Console.WriteLine($"WebSocket server website: http://{ip}:{port}/");
             // Start the server
             Console.Write("Server starting...");
             server.Start();
-            Console.WriteLine("Done!");
+            Console.WriteLine("Server starting done!");
 
             Console.WriteLine("Press Enter to stop the server or '!' to restart the server...");
+            Console.WriteLine();
 
             // Perform text input
             while (true)
@@ -68,7 +65,7 @@ namespace Adeotek.MicroWebServer.WebSocketExample
 
                 // Multicast admin message to all sessions
                 line = "(server) " + line;
-                server.MulticastText(line);
+                server.BroadcastText(line);
             }
 
             // Stop the server
@@ -77,9 +74,26 @@ namespace Adeotek.MicroWebServer.WebSocketExample
             Console.WriteLine("Done!");
         }
 
-        private static void OnMessageReceived(object sender, WsMessageEventArgs e)
+        private static void OnWsConnected(object sender, ConnectionEventArgs e)
         {
+            _logger?.LogDebug("WebSocket session [{id}] connected!", e.SessionId);
+        }
+
+        private static void OnWsDisconnected(object sender, ConnectionEventArgs e)
+        {
+            _logger?.LogDebug("WebSocket session [{id}] disconnected!", e.SessionId);
+        }
+
+        private static void OnWsReceived(object sender, RawMessageEventArgs e)
+        {
+            var message = Encoding.UTF8.GetString(e.Buffer, (int)e.Offset, (int)e.Size);
+            _logger?.LogDebug("WebSocket session [{id}] message received: {msg}", e.SessionId, message);
             //((BasicWsSession) sender).SendAsync(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+        }
+
+        private static void OnError(object sender, SocketErrorEventArgs e)
+        {
+            _logger?.LogDebug("WebSocket session [{id}] error ({msg}): {err}", e.SessionId, e.Message ?? string.Empty, e.Error);
         }
     }
 }

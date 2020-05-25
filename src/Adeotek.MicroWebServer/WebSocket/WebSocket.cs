@@ -1,62 +1,120 @@
 ﻿using System;
-using System.Text;
-using System.Security.Cryptography;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 
-namespace Adeotek.MicroWebServer.Network
+namespace Adeotek.MicroWebServer.WebSocket
 {
     /// <summary>
-    /// WebSocket utility class
+    ///     WebSocket utility class
     /// </summary>
     public class WebSocket : IWebSocket
     {
-        private readonly IWebSocket _wsHandler;
-
-        public WebSocket(IWebSocket wsHandler) { _wsHandler = wsHandler; ClearWsBuffers(); }
-
         /// <summary>
-        /// Final frame
+        ///     Final frame
         /// </summary>
         public const byte WS_FIN = 0x80;
+
         /// <summary>
-        /// Text frame
+        ///     Text frame
         /// </summary>
         public const byte WS_TEXT = 0x01;
+
         /// <summary>
-        /// Binary frame
+        ///     Binary frame
         /// </summary>
         public const byte WS_BINARY = 0x02;
+
         /// <summary>
-        /// Close frame
+        ///     Close frame
         /// </summary>
         public const byte WS_CLOSE = 0x08;
+
         /// <summary>
-        /// Ping frame
+        ///     Ping frame
         /// </summary>
         public const byte WS_PING = 0x09;
+
         /// <summary>
-        /// Pong frame
+        ///     Pong frame
         /// </summary>
         public const byte WS_PONG = 0x0A;
 
+        private readonly IWebSocket _wsHandler;
+
         /// <summary>
-        /// Perform WebSocket client upgrade
+        ///     Receive buffer
+        /// </summary>
+        internal readonly List<byte> WsReceiveBuffer = new List<byte>();
+
+        /// <summary>
+        ///     Receive buffer lock
+        /// </summary>
+        internal readonly object WsReceiveLock = new object();
+
+        /// <summary>
+        ///     Receive mask
+        /// </summary>
+        internal readonly byte[] WsReceiveMask = new byte[4];
+
+        /// <summary>
+        ///     Send buffer
+        /// </summary>
+        internal readonly List<byte> WsSendBuffer = new List<byte>();
+
+        /// <summary>
+        ///     Send buffer lock
+        /// </summary>
+        internal readonly object WsSendLock = new object();
+
+        /// <summary>
+        ///     Send mask
+        /// </summary>
+        internal readonly byte[] WsSendMask = new byte[4];
+
+        /// <summary>
+        ///     Handshaked flag
+        /// </summary>
+        internal bool WsHandshaked;
+
+        /// <summary>
+        ///     Received frame header size
+        /// </summary>
+        internal int WsHeaderSize;
+
+        /// <summary>
+        ///     Received frame payload size
+        /// </summary>
+        internal int WsPayloadSize;
+
+        /// <summary>
+        ///     Received frame flag
+        /// </summary>
+        internal bool WsReceived;
+
+        public WebSocket(IWebSocket wsHandler)
+        {
+            _wsHandler = wsHandler;
+            ClearWsBuffers();
+        }
+
+        /// <summary>
+        ///     Perform WebSocket client upgrade
         /// </summary>
         /// <param name="response">WebSocket upgrade HTTP response</param>
         /// <param name="id">WebSocket client Id</param>
         /// <returns>'true' if the WebSocket was successfully upgrade, 'false' if the WebSocket was not upgrade</returns>
-        public bool PerformClientUpgrade(HttpResponse response, Guid id)
+        public bool PerformClientUpgrade(Response response, Guid id)
         {
-            if (response.Status != 101)
-                return false;
+            if (response.Status != 101) return false;
 
-            bool error = false;
-            bool accept = false;
-            bool connection = false;
-            bool upgrade = false;
+            var error = false;
+            var accept = false;
+            var connection = false;
+            var upgrade = false;
 
             // Validate WebSocket handshake headers
-            for (int i = 0; i < response.Headers; ++i)
+            for (var i = 0; i < response.Headers; ++i)
             {
                 var header = response.Header(i);
                 var key = header.Item1;
@@ -67,7 +125,8 @@ namespace Adeotek.MicroWebServer.Network
                     if (value != "Upgrade")
                     {
                         error = true;
-                        _wsHandler.OnWsError("Invalid WebSocket handshaked response: 'Connection' header value must be 'Upgrade'");
+                        _wsHandler.OnWsError(
+                            "Invalid WebSocket handshaked response: 'Connection' header value must be 'Upgrade'");
                         break;
                     }
 
@@ -78,7 +137,8 @@ namespace Adeotek.MicroWebServer.Network
                     if (value != "websocket")
                     {
                         error = true;
-                        _wsHandler.OnWsError("Invalid WebSocket handshaked response: 'Upgrade' header value must be 'websocket'");
+                        _wsHandler.OnWsError(
+                            "Invalid WebSocket handshaked response: 'Upgrade' header value must be 'websocket'");
                         break;
                     }
 
@@ -87,9 +147,10 @@ namespace Adeotek.MicroWebServer.Network
                 else if (key == "Sec-WebSocket-Accept")
                 {
                     // Calculate the original WebSocket hash
-                    string wskey = Convert.ToBase64String(Encoding.UTF8.GetBytes(id.ToString())) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+                    var wskey = Convert.ToBase64String(Encoding.UTF8.GetBytes(id.ToString())) +
+                                "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
                     string wshash;
-                    using (SHA1Managed sha1 = new SHA1Managed())
+                    using (var sha1 = new SHA1Managed())
                     {
                         wshash = Encoding.UTF8.GetString(sha1.ComputeHash(Encoding.UTF8.GetBytes(wskey)));
                     }
@@ -101,7 +162,8 @@ namespace Adeotek.MicroWebServer.Network
                     if (string.Compare(wskey, wshash, StringComparison.InvariantCulture) != 0)
                     {
                         error = true;
-                        _wsHandler.OnWsError("Invalid WebSocket handshaked response: 'Sec-WebSocket-Accept' value validation failed");
+                        _wsHandler.OnWsError(
+                            "Invalid WebSocket handshaked response: 'Sec-WebSocket-Accept' value validation failed");
                         break;
                     }
 
@@ -112,14 +174,14 @@ namespace Adeotek.MicroWebServer.Network
             // Failed to perform WebSocket handshake
             if (!accept || !connection || !upgrade)
             {
-                if (!error)
-                    _wsHandler.OnWsError("Invalid WebSocket response");
+                if (!error) _wsHandler.OnWsError("Invalid WebSocket response");
+
                 return false;
             }
 
             // WebSocket successfully handshaked!
             WsHandshaked = true;
-            Random rnd = new Random();
+            var rnd = new Random();
             rnd.NextBytes(WsSendMask);
             _wsHandler.OnWsConnected(response);
 
@@ -127,26 +189,25 @@ namespace Adeotek.MicroWebServer.Network
         }
 
         /// <summary>
-        /// Perform WebSocket server upgrade
+        ///     Perform WebSocket server upgrade
         /// </summary>
         /// <param name="request">WebSocket upgrade HTTP request</param>
         /// <param name="response">WebSocket upgrade HTTP response</param>
         /// <returns>'true' if the WebSocket was successfully upgrade, 'false' if the WebSocket was not upgrade</returns>
-        public bool PerformServerUpgrade(HttpRequest request, HttpResponse response)
+        public bool PerformServerUpgrade(Request request, Response response)
         {
-            if (request.Method != "GET")
-                return false;
+            if (request.Method != "GET") return false;
 
-            bool error = false;
-            bool connection = false;
-            bool upgrade = false;
-            bool wsKey = false;
-            bool wsVersion = false;
+            var error = false;
+            var connection = false;
+            var upgrade = false;
+            var wsKey = false;
+            var wsVersion = false;
 
-            string accept = "";
+            var accept = "";
 
             // Validate WebSocket handshake headers
-            for (int i = 0; i < request.Headers; ++i)
+            for (var i = 0; i < request.Headers; ++i)
             {
                 var header = request.Header(i);
                 var key = header.Item1;
@@ -154,10 +215,12 @@ namespace Adeotek.MicroWebServer.Network
 
                 if (key == "Connection")
                 {
-                    if ((value != "Upgrade") && (value != "keep-alive, Upgrade"))
+                    if (value != "Upgrade" && value != "keep-alive, Upgrade")
                     {
                         error = true;
-                        response.MakeErrorResponse("Invalid WebSocket handshaked request: 'Connection' header value must be 'Upgrade' or 'keep-alive, Upgrade'", 400);
+                        response.MakeErrorResponse(
+                            "Invalid WebSocket handshaked request: 'Connection' header value must be 'Upgrade' or 'keep-alive, Upgrade'",
+                            400);
                         break;
                     }
 
@@ -168,7 +231,8 @@ namespace Adeotek.MicroWebServer.Network
                     if (value != "websocket")
                     {
                         error = true;
-                        response.MakeErrorResponse("Invalid WebSocket handshaked request: 'Upgrade' header value must be 'websocket'", 400);
+                        response.MakeErrorResponse(
+                            "Invalid WebSocket handshaked request: 'Upgrade' header value must be 'websocket'", 400);
                         break;
                     }
 
@@ -179,14 +243,16 @@ namespace Adeotek.MicroWebServer.Network
                     if (string.IsNullOrEmpty(value))
                     {
                         error = true;
-                        response.MakeErrorResponse("Invalid WebSocket handshaked request: 'Sec-WebSocket-Key' header value must be non empty", 400);
+                        response.MakeErrorResponse(
+                            "Invalid WebSocket handshaked request: 'Sec-WebSocket-Key' header value must be non empty",
+                            400);
                         break;
                     }
 
                     // Calculate the original WebSocket hash
-                    string wskey = value + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+                    var wskey = value + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
                     byte[] wshash;
-                    using (SHA1Managed sha1 = new SHA1Managed())
+                    using (var sha1 = new SHA1Managed())
                     {
                         wshash = sha1.ComputeHash(Encoding.UTF8.GetBytes(wskey));
                     }
@@ -200,7 +266,9 @@ namespace Adeotek.MicroWebServer.Network
                     if (value != "13")
                     {
                         error = true;
-                        response.MakeErrorResponse("Invalid WebSocket handshaked request: 'Sec-WebSocket-Version' header value must be '13'", 400);
+                        response.MakeErrorResponse(
+                            "Invalid WebSocket handshaked request: 'Sec-WebSocket-Version' header value must be '13'",
+                            400);
                         break;
                     }
 
@@ -209,14 +277,13 @@ namespace Adeotek.MicroWebServer.Network
             }
 
             // Filter out non WebSocket handshake requests
-            if (!connection && !upgrade && !wsKey && !wsVersion)
-                return false;
+            if (!connection && !upgrade && !wsKey && !wsVersion) return false;
 
             // Failed to perform WebSocket handshake
             if (!connection || !upgrade || !wsKey || !wsVersion)
             {
-                if (!error)
-                    response.MakeErrorResponse("Invalid WebSocket response", 400);
+                if (!error) response.MakeErrorResponse("Invalid WebSocket response", 400);
+
                 _wsHandler.SendResponse(response);
                 return false;
             }
@@ -230,22 +297,21 @@ namespace Adeotek.MicroWebServer.Network
             response.SetBody();
 
             // Validate WebSocket upgrade request and response
-            if (!_wsHandler.OnWsConnecting(request, response))
-                return false;
+            if (!_wsHandler.OnWsConnecting(request, response)) return false;
 
             // Send WebSocket upgrade response
             _wsHandler.SendResponse(response);
 
             // WebSocket successfully handshaked!
             WsHandshaked = true;
-            Array.Fill(WsSendMask, (byte)0);
+            Array.Fill(WsSendMask, (byte) 0);
             _wsHandler.OnWsConnected(request);
 
             return true;
         }
 
         /// <summary>
-        /// Prepare WebSocket send frame
+        ///     Prepare WebSocket send frame
         /// </summary>
         /// <param name="opcode">WebSocket opcode</param>
         /// <param name="mask">WebSocket mask</param>
@@ -263,18 +329,19 @@ namespace Adeotek.MicroWebServer.Network
 
             // Append WebSocket frame size
             if (size <= 125)
-                WsSendBuffer.Add((byte)(((int)size & 0xFF) | (mask ? 0x80 : 0)));
+            {
+                WsSendBuffer.Add((byte) (((int) size & 0xFF) | (mask ? 0x80 : 0)));
+            }
             else if (size <= 65535)
             {
-                WsSendBuffer.Add((byte)(126 | (mask ? 0x80 : 0)));
-                WsSendBuffer.Add((byte)((size >> 8) & 0xFF));
-                WsSendBuffer.Add((byte)(size & 0xFF));
+                WsSendBuffer.Add((byte) (126 | (mask ? 0x80 : 0)));
+                WsSendBuffer.Add((byte) ((size >> 8) & 0xFF));
+                WsSendBuffer.Add((byte) (size & 0xFF));
             }
             else
             {
-                WsSendBuffer.Add((byte)(127 | (mask ? 0x80 : 0)));
-                for (int i = 7; i >= 0; --i)
-                    WsSendBuffer.Add((byte)((size >> (8 * i)) & 0xFF));
+                WsSendBuffer.Add((byte) (127 | (mask ? 0x80 : 0)));
+                for (var i = 7; i >= 0; --i) WsSendBuffer.Add((byte) ((size >> (8 * i)) & 0xFF));
             }
 
             if (mask)
@@ -287,16 +354,16 @@ namespace Adeotek.MicroWebServer.Network
             }
 
             // Resize WebSocket frame buffer
-            int bufferOffset = WsSendBuffer.Count;
+            var bufferOffset = WsSendBuffer.Count;
             WsSendBuffer.AddRange(new byte[size]);
 
             // Mask WebSocket frame content
-            for (int i = 0; i < size; ++i)
+            for (var i = 0; i < size; ++i)
                 WsSendBuffer[bufferOffset + i] = (byte) (buffer[offset + i] ^ WsSendMask[i % 4]);
         }
 
         /// <summary>
-        /// Prepare WebSocket send frame
+        ///     Prepare WebSocket send frame
         /// </summary>
         /// <param name="buffer">Buffer to send</param>
         /// <param name="offset">Buffer offset</param>
@@ -331,148 +398,128 @@ namespace Adeotek.MicroWebServer.Network
 
                     // Prepare WebSocket frame opcode and mask flag
                     if (WsReceiveBuffer.Count < 2)
-                    {
-                        for (int i = 0; i < 2; ++i, ++index, --size)
+                        for (var i = 0; i < 2; ++i, ++index, --size)
                         {
-                            if (size == 0)
-                                return;
+                            if (size == 0) return;
+
                             WsReceiveBuffer.Add(buffer[offset + index]);
                         }
-                    }
 
-                    byte opcode = (byte) (WsReceiveBuffer[0] & 0x0F);
-                    bool fin = ((WsReceiveBuffer[0] >> 7) & 0x01) != 0;
-                    bool mask = ((WsReceiveBuffer[1] >> 7) & 0x01) != 0;
-                    int payload = WsReceiveBuffer[1] & (~0x80);
+                    var opcode = (byte) (WsReceiveBuffer[0] & 0x0F);
+                    var fin = ((WsReceiveBuffer[0] >> 7) & 0x01) != 0;
+                    var mask = ((WsReceiveBuffer[1] >> 7) & 0x01) != 0;
+                    var payload = WsReceiveBuffer[1] & ~0x80;
 
                     // Prepare WebSocket frame size
                     if (payload <= 125)
                     {
                         WsHeaderSize = 2 + (mask ? 4 : 0);
                         WsPayloadSize = payload;
-                    WsReceiveBuffer.Capacity = WsHeaderSize + WsPayloadSize;
+                        WsReceiveBuffer.Capacity = WsHeaderSize + WsPayloadSize;
                     }
                     else if (payload == 126)
                     {
                         if (WsReceiveBuffer.Count < 4)
-                        {
-                            for (int i = 0; i < 2; ++i, ++index, --size)
+                            for (var i = 0; i < 2; ++i, ++index, --size)
                             {
-                                if (size == 0)
-                                    return;
+                                if (size == 0) return;
+
                                 WsReceiveBuffer.Add(buffer[offset + index]);
                             }
-                        }
 
-                        payload = ((WsReceiveBuffer[2] << 8) | (WsReceiveBuffer[3] << 0));
+                        payload = (WsReceiveBuffer[2] << 8) | (WsReceiveBuffer[3] << 0);
                         WsHeaderSize = 4 + (mask ? 4 : 0);
                         WsPayloadSize = payload;
-                    WsReceiveBuffer.Capacity = WsHeaderSize + WsPayloadSize;
+                        WsReceiveBuffer.Capacity = WsHeaderSize + WsPayloadSize;
                     }
                     else if (payload == 127)
                     {
                         if (WsReceiveBuffer.Count < 10)
-                        {
-                            for (int i = 0; i < 8; ++i, ++index, --size)
+                            for (var i = 0; i < 8; ++i, ++index, --size)
                             {
-                                if (size == 0)
-                                    return;
+                                if (size == 0) return;
+
                                 WsReceiveBuffer.Add(buffer[offset + index]);
                             }
-                        }
 
-                        payload = ((WsReceiveBuffer[2] << 56) | (WsReceiveBuffer[3] << 48) | (WsReceiveBuffer[4] << 40) | (WsReceiveBuffer[5] << 32) | (WsReceiveBuffer[6] << 24) | (WsReceiveBuffer[7] << 16) | (WsReceiveBuffer[8] << 8) | (WsReceiveBuffer[9] << 0));
+                        payload = (WsReceiveBuffer[2] << 56) | (WsReceiveBuffer[3] << 48) | (WsReceiveBuffer[4] << 40) |
+                                  (WsReceiveBuffer[5] << 32) | (WsReceiveBuffer[6] << 24) | (WsReceiveBuffer[7] << 16) |
+                                  (WsReceiveBuffer[8] << 8) | (WsReceiveBuffer[9] << 0);
                         WsHeaderSize = 10 + (mask ? 4 : 0);
                         WsPayloadSize = payload;
-                    WsReceiveBuffer.Capacity = WsHeaderSize + WsPayloadSize;
+                        WsReceiveBuffer.Capacity = WsHeaderSize + WsPayloadSize;
                     }
 
                     // Prepare WebSocket frame mask
                     if (mask)
-                    {
                         if (WsReceiveBuffer.Count < WsHeaderSize)
-                        {
-                            for (int i = 0; i < 4; ++i, ++index, --size)
+                            for (var i = 0; i < 4; ++i, ++index, --size)
                             {
-                                if (size == 0)
-                                    return;
+                                if (size == 0) return;
+
                                 WsReceiveBuffer.Add(buffer[offset + index]);
                                 WsReceiveMask[i] = buffer[offset + index];
                             }
-                        }
-                    }
 
-                    int total = WsHeaderSize + WsPayloadSize;
-                    int length = Math.Min(total - WsReceiveBuffer.Count, (int)size);
+                    var total = WsHeaderSize + WsPayloadSize;
+                    var length = Math.Min(total - WsReceiveBuffer.Count, (int) size);
 
                     // Prepare WebSocket frame payload
-                    WsReceiveBuffer.AddRange(buffer[((int)offset + index)..((int)offset + index + length)]);
+                    WsReceiveBuffer.AddRange(buffer[((int) offset + index)..((int) offset + index + length)]);
                     index += length;
                     size -= length;
 
                     // Process WebSocket frame
                     if (WsReceiveBuffer.Count == total)
                     {
-                        int bufferOffset = WsHeaderSize;
+                        var bufferOffset = WsHeaderSize;
 
                         // Unmask WebSocket frame content
                         if (mask)
-                            for (int i = 0; i < WsPayloadSize; ++i)
+                            for (var i = 0; i < WsPayloadSize; ++i)
                                 WsReceiveBuffer[bufferOffset + i] ^= WsReceiveMask[i % 4];
 
                         WsReceived = true;
 
                         if ((opcode & WS_PING) == WS_PING)
-                        {
                             // Call the WebSocket ping handler
                             _wsHandler.OnWsPing(WsReceiveBuffer.ToArray(), bufferOffset, WsPayloadSize);
-                        }
                         else if ((opcode & WS_PONG) == WS_PONG)
-                        {
                             // Call the WebSocket pong handler
                             _wsHandler.OnWsPong(WsReceiveBuffer.ToArray(), bufferOffset, WsPayloadSize);
-                        }
                         else if ((opcode & WS_CLOSE) == WS_CLOSE)
-                        {
                             // Call the WebSocket close handler
                             _wsHandler.OnWsClose(WsReceiveBuffer.ToArray(), bufferOffset, WsPayloadSize);
-                        }
-                        else if (((opcode & WS_TEXT) == WS_TEXT) || ((opcode & WS_BINARY) == WS_BINARY))
-                        {
+                        else if ((opcode & WS_TEXT) == WS_TEXT || (opcode & WS_BINARY) == WS_BINARY)
                             // Call the WebSocket received handler
                             _wsHandler.OnWsReceived(WsReceiveBuffer.ToArray(), bufferOffset, WsPayloadSize);
-                        }
                     }
                 }
             }
         }
 
         /// <summary>
-        /// Required WebSocket receive frame size
+        ///     Required WebSocket receive frame size
         /// </summary>
         public int RequiredReceiveFrameSize()
         {
             lock (WsReceiveLock)
             {
-                if (WsReceived)
-                    return 0;
+                if (WsReceived) return 0;
 
                 // Required WebSocket frame opcode and mask flag
-                if (WsReceiveBuffer.Count < 2)
-                    return 2 - WsReceiveBuffer.Count;
+                if (WsReceiveBuffer.Count < 2) return 2 - WsReceiveBuffer.Count;
 
-                bool mask = ((WsReceiveBuffer[1] >> 7) & 0x01) != 0;
-                int payload = WsReceiveBuffer[1] & (~0x80);
+                var mask = ((WsReceiveBuffer[1] >> 7) & 0x01) != 0;
+                var payload = WsReceiveBuffer[1] & ~0x80;
 
                 // Required WebSocket frame size
-                if ((payload == 126) && (WsReceiveBuffer.Count < 4))
-                    return 4 - WsReceiveBuffer.Count;
-                if ((payload == 127) && (WsReceiveBuffer.Count < 10))
-                    return 10 - WsReceiveBuffer.Count;
+                if (payload == 126 && WsReceiveBuffer.Count < 4) return 4 - WsReceiveBuffer.Count;
+
+                if (payload == 127 && WsReceiveBuffer.Count < 10) return 10 - WsReceiveBuffer.Count;
 
                 // Required WebSocket frame mask
-                if ((mask) && (WsReceiveBuffer.Count < WsHeaderSize))
-                    return WsHeaderSize - WsReceiveBuffer.Count;
+                if (mask && WsReceiveBuffer.Count < WsHeaderSize) return WsHeaderSize - WsReceiveBuffer.Count;
 
                 // Required WebSocket frame payload
                 return WsHeaderSize + WsPayloadSize - WsReceiveBuffer.Count;
@@ -480,7 +527,7 @@ namespace Adeotek.MicroWebServer.Network
         }
 
         /// <summary>
-        /// Clear WebSocket send/receive buffers
+        ///     Clear WebSocket send/receive buffers
         /// </summary>
         public void ClearWsBuffers()
         {
@@ -499,48 +546,5 @@ namespace Adeotek.MicroWebServer.Network
                 Array.Clear(WsSendMask, 0, WsSendMask.Length);
             }
         }
-
-        /// <summary>
-        /// Handshaked flag
-        /// </summary>
-        internal bool WsHandshaked;
-        /// <summary>
-        /// Received frame flag
-        /// </summary>
-        internal bool WsReceived;
-        /// <summary>
-        /// Received frame header size
-        /// </summary>
-        internal int WsHeaderSize;
-        /// <summary>
-        /// Received frame payload size
-        /// </summary>
-        internal int WsPayloadSize;
-
-        /// <summary>
-        /// Receive buffer lock
-        /// </summary>
-        internal readonly object WsReceiveLock = new object();
-        /// <summary>
-        /// Receive buffer
-        /// </summary>
-        internal readonly List<byte> WsReceiveBuffer = new List<byte>();
-        /// <summary>
-        /// Receive mask
-        /// </summary>
-        internal readonly byte[] WsReceiveMask = new byte[4];
-
-        /// <summary>
-        /// Send buffer lock
-        /// </summary>
-        internal readonly object WsSendLock = new object();
-        /// <summary>
-        /// Send buffer
-        /// </summary>
-        internal readonly List<byte> WsSendBuffer = new List<byte>();
-        /// <summary>
-        /// Send mask
-        /// </summary>
-        internal readonly byte[] WsSendMask = new byte[4];
     }
 }

@@ -6,157 +6,226 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-namespace Adeotek.MicroWebServer.Core
+namespace Adeotek.MicroWebServer.WebSocket
 {
-    /// <summary>
-    /// TCP server is used to connect, disconnect and manage TCP sessions
-    /// </summary>
-    /// <remarks>Thread-safe</remarks>
-    public class TcpServer : IServer
+    public class Server : IWebSocket
     {
+        public delegate void ServerSocketErrorDelegate(object sender, SocketErrorEventArgs e);
+
+        // events
+        public delegate void ServerStartedDelegate(object sender, ServerStateEventArgs e);
+
+        public delegate void ServerStoppedDelegate(object sender, ServerStateEventArgs e);
+
+        public event ServerStartedDelegate OnServerStarted;
+        public event ServerStoppedDelegate OnServerStopped;
+        public event ServerSocketErrorDelegate OnServerError;
+
+        public event Session.SessionConnectedDelegate OnSessionConnected;
+        public event Session.SessionDisconnectedDelegate OnSessionDisconnected;
+        public event Session.SessionErrorDelegate OnSessionError;
+        public event Session.RawMessageReceivedDelegate OnMessageReceived;
+        public event Session.MessageSentDelegate OnMessageSent;
+        public event Session.EmptyMessageDelegate OnEmptyMessage;
+
         // Server sessions
-        protected readonly ConcurrentDictionary<Guid, ISession> Sessions = new ConcurrentDictionary<Guid, ISession>();
+        protected readonly ConcurrentDictionary<Guid, Session> Sessions = new ConcurrentDictionary<Guid, Session>();
+
+        internal readonly WebSocket WebSocket;
+
+        protected SocketAsyncEventArgs _acceptorEventArg;
+
         // Server acceptor
         protected Socket _acceptorSocket;
-        protected SocketAsyncEventArgs _acceptorEventArg;
 
         // Server statistic
         internal long _bytesPending;
-        internal long _bytesSent;
         internal long _bytesReceived;
+        internal long _bytesSent;
 
-        // events
-        public event IServer.ServerStartedDelegate OnServerStarted;
-        public event IServer.ServerStoppedDelegate OnServerStopped;
-        public event ISession.SessionConnectedDelegate OnSessionConnected;
-        public event ISession.SessionDisconnectedDelegate OnSessionDisconnected;
-        public event ISession.SessionErrorDelegate OnSocketError;
-
-        public event ISession.SessionErrorDelegate OnSessionSocketError;
-        public event ISession.RawMessageReceivedDelegate OnMessageReceived;
-        public event ISession.MessageSentDelegate OnMessageSent;
-        public event ISession.EmptyMessageDelegate OnEmptyMessage;
 
         /// <summary>
-        /// Initialize TCP server with a given IP address and port number
+        ///     Initialize WebSocket server with a given IP address and port number
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public TcpServer(IPAddress address, int port) : this(new IPEndPoint(address, port)) { }
-        /// <summary>
-        /// Initialize TCP server with a given IP address and port number
-        /// </summary>
-        /// <param name="address">IP address</param>
-        /// <param name="port">Port number</param>
-        public TcpServer(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port)) { }
-        /// <summary>
-        /// Initialize TCP server with a given IP endpoint
-        /// </summary>
-        /// <param name="endpoint">IP endpoint</param>
-        public TcpServer(IPEndPoint endpoint)
+        public Server(IPAddress address, int port) : this(new IPEndPoint(address, port))
         {
-            Id = Guid.NewGuid();
-            Endpoint = endpoint;
         }
 
         /// <summary>
-        /// Server Id
+        ///     Initialize WebSocket server with a given IP address and port number
+        /// </summary>
+        /// <param name="address">IP address</param>
+        /// <param name="port">Port number</param>
+        public Server(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port))
+        {
+        }
+
+        /// <summary>
+        ///     Initialize WebSocket server with a given IP endpoint
+        /// </summary>
+        /// <param name="endpoint">IP endpoint</param>
+        public Server(IPEndPoint endpoint)
+        {
+            Id = Guid.NewGuid();
+            Endpoint = endpoint;
+            WebSocket = new WebSocket(this);
+        }
+
+        /// <summary>
+        ///     Server Id
         /// </summary>
         public Guid Id { get; }
+
         /// <summary>
-        /// IP endpoint
+        ///     IP endpoint
         /// </summary>
         public IPEndPoint Endpoint { get; protected set; }
+
         /// <summary>
-        /// Number of sessions connected to the server
+        ///     Number of sessions connected to the server
         /// </summary>
         public long ConnectedSessions => Sessions.Count;
+
         /// <summary>
-        /// Number of bytes pending sent by the server
+        ///     Number of bytes pending sent by the server
         /// </summary>
         public long BytesPending => _bytesPending;
+
         /// <summary>
-        /// Number of bytes sent by the server
+        ///     Number of bytes sent by the server
         /// </summary>
         public long BytesSent => _bytesSent;
+
         /// <summary>
-        /// Number of bytes received by the server
+        ///     Number of bytes received by the server
         /// </summary>
         public long BytesReceived => _bytesReceived;
+
         /// <summary>
-        /// Option: acceptor backlog size
+        ///     Option: acceptor backlog size
         /// </summary>
         /// <remarks>
-        /// This option will set the listening socket's backlog size
+        ///     This option will set the listening socket's backlog size
         /// </remarks>
         public int OptionAcceptorBacklog { get; set; } = 1024;
+
         /// <summary>
-        /// Option: dual mode socket
+        ///     Option: dual mode socket
         /// </summary>
         /// <remarks>
-        /// Specifies whether the Socket is a dual-mode socket used for both IPv4 and IPv6.
-        /// Will work only if socket is bound on IPv6 address.
+        ///     Specifies whether the Socket is a dual-mode socket used for both IPv4 and IPv6.
+        ///     Will work only if socket is bound on IPv6 address.
         /// </remarks>
         public bool OptionDualMode { get; set; }
+
         /// <summary>
-        /// Option: keep alive
+        ///     Option: keep alive
         /// </summary>
         /// <remarks>
-        /// This option will setup SO_KEEPALIVE if the OS support this feature
+        ///     This option will setup SO_KEEPALIVE if the OS support this feature
         /// </remarks>
         public bool OptionKeepAlive { get; set; }
+
         /// <summary>
-        /// Option: no delay
+        ///     Option: no delay
         /// </summary>
         /// <remarks>
-        /// This option will enable/disable Nagle's algorithm for TCP protocol
+        ///     This option will enable/disable Nagle's algorithm for TCP protocol
         /// </remarks>
         public bool OptionNoDelay { get; set; }
+
         /// <summary>
-        /// Option: reuse address
+        ///     Option: reuse address
         /// </summary>
         /// <remarks>
-        /// This option will enable/disable SO_REUSEADDR if the OS support this feature
+        ///     This option will enable/disable SO_REUSEADDR if the OS support this feature
         /// </remarks>
         public bool OptionReuseAddress { get; set; }
+
         /// <summary>
-        /// Option: enables a socket to be bound for exclusive access
+        ///     Option: enables a socket to be bound for exclusive access
         /// </summary>
         /// <remarks>
-        /// This option will enable/disable SO_EXCLUSIVEADDRUSE if the OS support this feature
+        ///     This option will enable/disable SO_EXCLUSIVEADDRUSE if the OS support this feature
         /// </remarks>
         public bool OptionExclusiveAddressUse { get; set; }
+
         /// <summary>
-        /// Option: receive buffer size
+        ///     Option: receive buffer size
         /// </summary>
         public int OptionReceiveBufferSize { get; set; } = 8192;
+
         /// <summary>
-        /// Option: send buffer size
+        ///     Option: send buffer size
         /// </summary>
         public int OptionSendBufferSize { get; set; } = 8192;
+
+        #region Session factory
+
+        /// <summary>
+        ///     Create TCP session factory method
+        /// </summary>
+        /// <returns>TCP session</returns>
+        protected virtual Session CreateSession()
+        {
+            var newSession = new Session(this);
+
+            if (OnSessionError != null) newSession.OnSessionError += OnSessionError;
+            if (OnSessionConnected != null) newSession.OnSessionConnected += OnSessionConnected;
+            if (OnSessionDisconnected != null) newSession.OnSessionDisconnected += OnSessionDisconnected;
+            if (OnMessageSent != null) newSession.OnMessageSent += OnMessageSent;
+            if (OnMessageReceived != null) newSession.OnMessageReceived += OnMessageReceived;
+            if (OnEmptyMessage != null) newSession.OnEmptyMessage += OnEmptyMessage;
+
+            return newSession;
+        }
+
+        #endregion
+
+        #region Error handling
+
+        /// <summary>
+        ///     Send error notification
+        /// </summary>
+        /// <param name="error">Socket error code</param>
+        private void SendError(SocketError error)
+        {
+            // Skip disconnect errors
+            if (error == SocketError.ConnectionAborted ||
+                error == SocketError.ConnectionRefused ||
+                error == SocketError.ConnectionReset ||
+                error == SocketError.OperationAborted ||
+                error == SocketError.Shutdown)
+                return;
+
+            OnError(error);
+        }
+
+        #endregion
 
         #region Start/Stop server
 
         /// <summary>
-        /// Is the server started?
+        ///     Is the server started?
         /// </summary>
         public bool IsStarted { get; protected set; }
+
         /// <summary>
-        /// Is the server accepting new clients?
+        ///     Is the server accepting new clients?
         /// </summary>
         public bool IsAccepting { get; protected set; }
 
         /// <summary>
-        /// Start the server
+        ///     Start the server
         /// </summary>
         /// <returns>'true' if the server was successfully started, 'false' if the server failed to start</returns>
         public virtual bool Start()
         {
             Debug.Assert(!IsStarted, "TCP server is already started!");
             if (IsStarted)
-            {
                 return false;
-            }
 
             // Setup acceptor event arg
             _acceptorEventArg = new SocketAsyncEventArgs();
@@ -169,19 +238,19 @@ namespace Adeotek.MicroWebServer.Core
             IsSocketDisposed = false;
 
             // Apply the option: reuse address
-            _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, OptionReuseAddress);
+            _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress,
+                OptionReuseAddress);
             // Apply the option: exclusive address use
-            _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, OptionExclusiveAddressUse);
+            _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse,
+                OptionExclusiveAddressUse);
             // Apply the option: dual mode (this option must be applied before listening)
             if (_acceptorSocket.AddressFamily == AddressFamily.InterNetworkV6)
-            {
                 _acceptorSocket.DualMode = OptionDualMode;
-            }
 
             // Bind the acceptor socket to the IP endpoint
             _acceptorSocket.Bind(Endpoint);
             // Refresh the endpoint property based on the actual endpoint created
-            Endpoint = (IPEndPoint)_acceptorSocket.LocalEndPoint;
+            Endpoint = (IPEndPoint) _acceptorSocket.LocalEndPoint;
             // Start listen to the acceptor socket with the given accepting backlog size
             _acceptorSocket.Listen(OptionAcceptorBacklog);
 
@@ -204,16 +273,14 @@ namespace Adeotek.MicroWebServer.Core
         }
 
         /// <summary>
-        /// Stop the server
+        ///     Stop the server
         /// </summary>
         /// <returns>'true' if the server was successfully stopped, 'false' if the server is already stopped</returns>
         public virtual bool Stop()
         {
             Debug.Assert(IsStarted, "TCP server is not started!");
             if (!IsStarted)
-            {
                 return false;
-            }
 
             // Stop accepting new clients
             IsAccepting = false;
@@ -243,22 +310,27 @@ namespace Adeotek.MicroWebServer.Core
         }
 
         /// <summary>
-        /// Restart the server
+        ///     Restart the server
         /// </summary>
         /// <returns>'true' if the server was successfully restarted, 'false' if the server failed to restart</returns>
         public virtual bool Restart()
         {
             if (!Stop())
-            {
                 return false;
-            }
 
             while (IsStarted)
-            {
                 Thread.Yield();
-            }
 
             return Start();
+        }
+
+        public virtual bool CloseAll(int status)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_CLOSE, false, null, 0, 0, status);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray()) && DisconnectAll();
+            }
         }
 
         #endregion
@@ -266,7 +338,7 @@ namespace Adeotek.MicroWebServer.Core
         #region Accepting clients
 
         /// <summary>
-        /// Start accept a new client connection
+        ///     Start accept a new client connection
         /// </summary>
         private void StartAccept(SocketAsyncEventArgs e)
         {
@@ -275,13 +347,11 @@ namespace Adeotek.MicroWebServer.Core
 
             // Async accept a new client connection
             if (!_acceptorSocket.AcceptAsync(e))
-            {
                 ProcessAccept(e);
-            }
         }
 
         /// <summary>
-        /// Process accepted client connection
+        ///     Process accepted client connection
         /// </summary>
         private void ProcessAccept(SocketAsyncEventArgs e)
         {
@@ -303,14 +373,12 @@ namespace Adeotek.MicroWebServer.Core
 
             // Accept the next client connection
             if (IsAccepting)
-            {
                 StartAccept(e);
-            }
         }
 
         /// <summary>
-        /// This method is the callback method associated with Socket.AcceptAsync()
-        /// operations and is invoked when an accept operation is complete
+        ///     This method is the callback method associated with Socket.AcceptAsync()
+        ///     operations and is invoked when an accept operation is complete
         /// </summary>
         private void OnAsyncCompleted(object sender, SocketAsyncEventArgs e)
         {
@@ -319,98 +387,53 @@ namespace Adeotek.MicroWebServer.Core
 
         #endregion
 
-        #region Session factory
-
-        /// <summary>
-        /// Create TCP session factory method
-        /// </summary>
-        /// <returns>TCP session</returns>
-        protected virtual ISession CreateSession()
-        {
-            var newSession = new TcpSession(this);
-            SetSessionHandlers(newSession);
-            return newSession;
-        }
-
-        /// <summary>
-        /// Set TCP session events handlers method
-        /// </summary>
-        /// <param name="session">Connected session</param>
-        protected virtual void SetSessionHandlers(ISession session)
-        {
-            if (OnSessionSocketError != null)
-            {
-                session.OnSocketError += OnSessionSocketError;
-            }
-            if (OnMessageReceived != null)
-            {
-                session.OnMessageReceived += OnMessageReceived;
-            }
-            if (OnMessageSent != null)
-            {
-                session.OnMessageSent += OnMessageSent;
-            }
-            if (OnEmptyMessage != null)
-            {
-                session.OnEmptyMessage += OnEmptyMessage;
-            }
-        }
-
-        #endregion
-
         #region Session management
 
         /// <summary>
-        /// Disconnect all connected sessions
+        ///     Disconnect all connected sessions
         /// </summary>
         /// <returns>'true' if all sessions were successfully disconnected, 'false' if the server is not started</returns>
         public virtual bool DisconnectAll()
         {
             if (!IsStarted)
-            {
                 return false;
-            }
 
             // Disconnect all sessions
             foreach (var session in Sessions.Values)
-            {
                 session.Disconnect();
-            }
 
             return true;
         }
 
         /// <summary>
-        /// Find a session with a given Id
+        ///     Find a session with a given Id
         /// </summary>
-        /// <param name="sessionId">Session Id</param>
+        /// <param name="id">Session Id</param>
         /// <returns>Session with a given Id or null if the session it not connected</returns>
-        public ISession FindSession(Guid sessionId)
+        public Session FindSession(Guid id)
         {
             // Try to find the required session
-            return Sessions.TryGetValue(sessionId, out var result) ? result : null;
+            return Sessions.TryGetValue(id, out var result) ? result : null;
         }
 
-
-
         /// <summary>
-        /// Register a new session
+        ///     Register a new session
         /// </summary>
         /// <param name="session">Session to register</param>
-        internal void RegisterSession(ISession session)
+        internal void RegisterSession(Session session)
         {
             // Register a new session
             Sessions.TryAdd(session.Id, session);
         }
 
         /// <summary>
-        /// Unregister session by Id
+        ///     Unregister session by Id
         /// </summary>
-        /// <param name="sessionId">Session Id</param>
-        internal void UnregisterSession(Guid sessionId)
+        /// <param name="id">Session Id</param>
+        internal void UnregisterSession(Guid id)
         {
             // Unregister session by Id
-            Sessions.TryRemove(sessionId, out _);
+            Sessions.TryRemove(id, out var temp);
         }
 
         #endregion
@@ -418,53 +441,134 @@ namespace Adeotek.MicroWebServer.Core
         #region Broadcasting
 
         /// <summary>
-        /// Broadcast text to all connected clients
-        /// </summary>
-        /// <param name="text">Text string to broadcast</param>
-        /// <returns>'true' if the text was successfully broadcast, 'false' if the text was not broadcast</returns>
-        public virtual bool Broadcast(string text) { return Broadcast(Encoding.UTF8.GetBytes(text)); }
-
-        /// <summary>
-        /// Broadcast data to all connected sessions
+        ///     Broadcast data to all connected sessions
         /// </summary>
         /// <param name="buffer">Buffer to broadcast</param>
-        /// <returns>'true' if the data was successfully broadcast, 'false' if the data was not broadcast</returns>
-        public virtual bool Broadcast(byte[] buffer) { return Broadcast(buffer, 0, buffer.Length); }
+        /// <returns>'true' if the data was successfully broadcasted, 'false' if the data was not broadcasted</returns>
+        public virtual bool Broadcast(byte[] buffer)
+        {
+            return Broadcast(buffer, 0, buffer.Length);
+        }
 
         /// <summary>
-        /// Broadcast data to all connected clients
+        ///     Broadcast data to all connected clients
         /// </summary>
         /// <param name="buffer">Buffer to broadcast</param>
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
-        /// <returns>'true' if the data was successfully broadcast, 'false' if the data was not broadcast</returns>
+        /// <returns>'true' if the data was successfully broadcasted, 'false' if the data was not broadcasted</returns>
         public virtual bool Broadcast(byte[] buffer, long offset, long size)
         {
-            if (!IsStarted)
-            {
-                return false;
-            }
+            if (!IsStarted) return false;
 
-            if (size == 0)
-            {
-                return true;
-            }
+            if (size == 0) return true;
 
-            // Broadcast data to all sessions
+            // Multicast data to all WebSocket sessions
             foreach (var session in Sessions.Values)
             {
-                session.SendAsync(buffer, offset, size);
+                if (!(session is Session wsSession)) continue;
+                if (wsSession.WebSocket.WsHandshaked) wsSession.SendAsync(buffer, offset, size);
             }
 
             return true;
         }
 
+        /// <summary>
+        ///     Broadcast text to all connected clients
+        /// </summary>
+        /// <param name="text">Text string to broadcast</param>
+        /// <returns>'true' if the text was successfully broadcasted, 'false' if the text was not broadcasted</returns>
+        public virtual bool Broadcast(string text)
+        {
+            return Broadcast(Encoding.UTF8.GetBytes(text));
+        }
+
+        public bool BroadcastText(byte[] buffer, long offset, long size)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_TEXT, false, buffer, offset, size);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray());
+            }
+        }
+
+        public bool BroadcastText(string text)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                var data = Encoding.UTF8.GetBytes(text);
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_TEXT, false, data, 0, data.Length);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray());
+            }
+        }
+
+        public bool BroadcastBinary(byte[] buffer, long offset, long size)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_BINARY, false, buffer, offset, size);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray());
+            }
+        }
+
+        public bool BroadcastBinary(string text)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                var data = Encoding.UTF8.GetBytes(text);
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_BINARY, false, data, 0, data.Length);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray());
+            }
+        }
+
         #endregion
 
-        #region Server handlers
+        #region WebSocket Broadcast ping/pong methods
+
+        public bool SendPing(byte[] buffer, long offset, long size)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PING, false, buffer, offset, size);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray());
+            }
+        }
+
+        public bool SendPing(string text)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                var data = Encoding.UTF8.GetBytes(text);
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PING, false, data, 0, data.Length);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray());
+            }
+        }
+
+        public bool SendPong(byte[] buffer, long offset, long size)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PONG, false, buffer, offset, size);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray());
+            }
+        }
+
+        public bool SendPong(string text)
+        {
+            lock (WebSocket.WsSendLock)
+            {
+                var data = Encoding.UTF8.GetBytes(text);
+                WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PONG, false, data, 0, data.Length);
+                return Broadcast(WebSocket.WsSendBuffer.ToArray());
+            }
+        }
+
+        #endregion
+
+        #region Server handlers/events
 
         /// <summary>
-        /// Handle server started notification
+        ///     Handle server started notification
         /// </summary>
         protected virtual void OnStarted()
         {
@@ -472,7 +576,7 @@ namespace Adeotek.MicroWebServer.Core
         }
 
         /// <summary>
-        /// Handle server stopped notification
+        ///     Handle server stopped notification
         /// </summary>
         protected virtual void OnStopped()
         {
@@ -480,56 +584,40 @@ namespace Adeotek.MicroWebServer.Core
         }
 
         /// <summary>
-        /// Handle session connected notification
+        ///     Handle session connected notification
         /// </summary>
         /// <param name="session">Connected session</param>
-        protected virtual void OnConnected(ISession session)
+        protected virtual void OnConnected(Session session)
         {
             OnSessionConnected?.Invoke(session, new ConnectionEventArgs(session.Id));
         }
 
         /// <summary>
-        /// Handle session disconnected notification
+        ///     Handle session disconnected notification
         /// </summary>
         /// <param name="session">Disconnected session</param>
-        protected virtual void OnDisconnected(ISession session)
+        protected virtual void OnDisconnected(Session session)
         {
             OnSessionDisconnected?.Invoke(session, new ConnectionEventArgs(session.Id));
         }
 
         /// <summary>
-        /// Handle error notification
+        ///     Handle error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
         protected virtual void OnError(SocketError error)
         {
-            OnSocketError?.Invoke(this, new SocketErrorEventArgs(Guid.Empty, error));
+            OnServerError?.Invoke(this, new SocketErrorEventArgs(Guid.Empty, error));
         }
 
-        internal void OnConnectedInternal(ISession session) { OnConnected(session); }
-        internal void OnDisconnectedInternal(ISession session) { OnDisconnected(session); }
-
-        #endregion
-
-        #region Error handling
-
-        /// <summary>
-        /// Send error notification
-        /// </summary>
-        /// <param name="error">Socket error code</param>
-        private void SendError(SocketError error)
+        internal void OnConnectedInternal(Session session)
         {
-            // Skip disconnect errors
-            if ((error == SocketError.ConnectionAborted) ||
-                (error == SocketError.ConnectionRefused) ||
-                (error == SocketError.ConnectionReset) ||
-                (error == SocketError.OperationAborted) ||
-                (error == SocketError.Shutdown))
-            {
-                return;
-            }
+            OnConnected(session);
+        }
 
-            OnError(error);
+        internal void OnDisconnectedInternal(Session session)
+        {
+            OnDisconnected(session);
         }
 
         #endregion
@@ -537,12 +625,12 @@ namespace Adeotek.MicroWebServer.Core
         #region IDisposable implementation
 
         /// <summary>
-        /// Disposed flag
+        ///     Disposed flag
         /// </summary>
         public bool IsDisposed { get; protected set; }
 
         /// <summary>
-        /// Acceptor socket disposed flag
+        ///     Acceptor socket disposed flag
         /// </summary>
         public bool IsSocketDisposed { get; protected set; } = true;
 
@@ -567,16 +655,11 @@ namespace Adeotek.MicroWebServer.Core
             // refer to reference type fields because those objects may
             // have already been finalized."
 
-            if (IsDisposed)
-            {
-                return;
-            }
+            if (IsDisposed) return;
 
             if (disposingManagedResources)
-            {
                 // Dispose managed resources here...
                 Stop();
-            }
 
             // Dispose unmanaged resources here...
 
@@ -587,7 +670,7 @@ namespace Adeotek.MicroWebServer.Core
         }
 
         // Use C# destructor syntax for finalization code.
-        ~TcpServer()
+        ~Server()
         {
             // Simply call Dispose(false).
             Dispose(false);

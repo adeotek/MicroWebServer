@@ -8,6 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Adeotek.MicroWebServer
 {
+    public enum ResponseTypes
+    {
+        Text = 0,
+        Html = 1,
+        Json = 2,
+        Jsonp = 3
+    }
     public class MicroHttpServer : IDisposable
     {
         private ILogger _logger;
