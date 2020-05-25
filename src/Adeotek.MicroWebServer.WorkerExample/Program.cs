@@ -36,22 +36,22 @@ namespace Adeotek.MicroWebServer.WorkerExample
             //var worker = new Server("127.0.0.1", 8080, logger);
             //worker.OnNewMessage += OnMessageHandler;
 
-            var worker = new WebSocketServer("127.0.0.1", 8080, logger);
+            //var worker = new WebSocketServer("127.0.0.1", 8080, logger);
 
-            logger.LogInformation($"Starting {worker.GetType().Name}. \nCTRL+S to stop the Worker and exit.");
-            worker.Start();
+            //logger.LogInformation($"Starting {worker.GetType().Name}. \nCTRL+S to stop the Worker and exit.");
+            //worker.Start();
 
-            while (worker.IsRunning)
-            {
-                cki = Console.ReadKey(true);
-                if (cki.Key != ConsoleKey.S)
-                {
-                    continue;
-                }
-                logger.LogInformation("Initiating Worker.Stop()...");
-                //worker.Stop(true);
-                break;
-            }
+            //while (worker.IsRunning)
+            //{
+            //    cki = Console.ReadKey(true);
+            //    if (cki.Key != ConsoleKey.S)
+            //    {
+            //        continue;
+            //    }
+            //    logger.LogInformation("Initiating Worker.Stop()...");
+            //    //worker.Stop(true);
+            //    break;
+            //}
         }
 
 

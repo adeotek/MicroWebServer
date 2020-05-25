@@ -1,169 +1,91 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading;
+using Adeotek.MicroWebServer.Network;
 using Microsoft.Extensions.Logging;
 
 namespace Adeotek.MicroWebServer
 {
-    public class WebSocketServer : IDisposable
+    public class WebSocketServer
     {
         private readonly ILogger _logger;
-        private readonly string _ipAddress;
-        private readonly int _port;
-        //private readonly ConnectionsManager _connectionsManager;
-        private Socket _listener;
-        public static ManualResetEvent ListenerState = new ManualResetEvent(false);
+        private BasicWsServer _server;
 
-        //public delegate void NewMessage(object sender, WebSocketMessageEventArgs e);
-        //public event NewMessage OnNewMessage;
+        public ICollection<string> CrossDomains { get; set; }
         public bool IsRunning { get; private set; }
 
+        public delegate void ServerErrorDelegate(object sender, WsErrorEventArgs e);
+        public delegate void SessionErrorDelegate(object sender, WsErrorEventArgs e);
+        public delegate void SessionConnectedDelegate(object sender, WsConnectionEventArgs e);
+        public delegate void SessionDisconnectedDelegate(object sender, WsConnectionEventArgs e);
+        public delegate void SessionMessageReceivedDelegate(object sender, WsMessageEventArgs e);
+        public event ServerErrorDelegate OnServerError;
+        public event SessionErrorDelegate OnSessionError;
+        public event SessionConnectedDelegate OnSessionConnected;
+        public event SessionDisconnectedDelegate OnSessionDisconnected;
+        public event SessionMessageReceivedDelegate OnMessageReceived;
+
         public WebSocketServer(
-            //Func<HttpListenerRequest, string> requestResponderMethod,
             string ipAddress = "127.0.0.1",
             int port = 8080,
-            ILogger logger = null)
+            ICollection<string> crossDomains = null,
+            ILogger logger = null
+            )
         {
             _logger = logger;
-            _ipAddress = ipAddress;
-            _port = port;
-            //_connectionsManager = new ConnectionsManager();
+            _server = new BasicWsServer(IPAddress.Parse(ipAddress), port, _logger);
+            _server.OnWsServerError += OnWsServerError;
+            _server.OnSessionError += OnWsSessionError;
+            _server.OnSessionConnected += OnWsSessionConnected;
+            _server.OnSessionDisconnected += OnWsSessionDisconnected;
+            _server.OnSessionMessageReceived += OnWsMessageReceived;
+            CrossDomains = crossDomains;
         }
 
-        public void Start()
+        public bool Start()
         {
-            _logger?.LogDebug("WebSocket server is starting...");
-            try
-            {
-                var ipAddress = IPAddress.Parse(_ipAddress);
-                _listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                _listener.Bind(new IPEndPoint(ipAddress, _port));
-                _listener.Listen(100);
-                IsRunning = true;
-                _logger?.LogInformation("WebSocket server is listening on: {ip}:{port}", _ipAddress, _port);
-                ThreadPool.QueueUserWorkItem((o) =>
-                {
-                    while (IsRunning)
-                    {
-                        // Set the event to nonsignaled state.  
-                        ListenerState.Reset();
-
-                        // Start an asynchronous socket to listen for connections.  
-                        Console.WriteLine("Waiting for a connection...");
-                        _logger?.LogDebug("Waiting for a connection...");
-                        _listener.BeginAccept(new AsyncCallback(AcceptCallback), _listener);
-
-                        // Wait until a connection is made before continuing.  
-                        ListenerState.WaitOne();
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                IsRunning = false;
-                _listener?.Dispose();
-                _listener = null;
-                throw ex;
-            }
+            return _server?.Start() ?? false;
         }
 
-        public void Stop()
+        public bool Stop()
         {
-            _logger?.LogDebug("WebSocket server is stopping...");
-            IsRunning = false;
-            _listener?.Dispose();
-            _listener = null;
-            _logger?.LogInformation("WebSocket server not listening anymore!");
+            return _server?.Stop() ?? false;
         }
 
-        public void Dispose()
+        public bool Restart()
         {
-            _listener?.Dispose();
-            _listener = null;
+            return _server?.Restart() ?? false;
         }
 
-        private void AcceptCallback(IAsyncResult ar)
+        public bool MulticastText(string text)
         {
-            // Signal the main thread to continue.  
-            allDone.Set();
-
-            // Get the socket that handles the client request.  
-            Socket listener = (Socket)ar.AsyncState;
-            Socket handler = listener.EndAccept(ar);
-
-            // Create the state object.  
-            StateObject state = new StateObject();
-            state.workSocket = handler;
-            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                new AsyncCallback(ReadCallback), state);
+            return _server?.Multicast(text) ?? false;
         }
 
-        private void ReadCallback(IAsyncResult ar)
+        private void OnWsMessageReceived(object sender, WsMessageEventArgs e)
         {
-            String content = String.Empty;
-
-            // Retrieve the state object and the handler socket  
-            // from the asynchronous state object.  
-            StateObject state = (StateObject)ar.AsyncState;
-            Socket handler = state.workSocket;
-
-            // Read data from the client socket.
-            int bytesRead = handler.EndReceive(ar);
-
-            if (bytesRead > 0)
-            {
-                // There  might be more data, so store the data received so far.  
-                state.sb.Append(Encoding.ASCII.GetString(
-                    state.buffer, 0, bytesRead));
-
-                // Check for end-of-file tag. If it is not there, read
-                // more data.  
-                content = state.sb.ToString();
-                if (content.IndexOf("<EOF>") > -1)
-                {
-                    // All the data has been read from the
-                    // client. Display it on the console.  
-                    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
-                        content.Length, content);
-                    // Echo the data back to the client.  
-                    Send(handler, content);
-                }
-                else
-                {
-                    // Not all data received. Get more.  
-                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                    new AsyncCallback(ReadCallback), state);
-                }
-            }
+            OnMessageReceived?.Invoke(sender, e);
         }
 
-        private void Send(Socket handler, string data)
+        private void OnWsSessionConnected(object sender, WsConnectionEventArgs e)
         {
-            // Convert the string data to byte data using ASCII encoding.  
-            var byteData = Encoding.ASCII.GetBytes(data);
-            // Begin sending the data to the remote device.  
-            handler.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), handler);
+            OnSessionConnected?.Invoke(sender, e);
         }
 
-        private void SendCallback(IAsyncResult ar)
+        private void OnWsSessionDisconnected(object sender, WsConnectionEventArgs e)
         {
-            try
-            {
-                // Retrieve the socket from the state object.  
-                var handler = (Socket)ar.AsyncState;
-                // Complete sending the data to the remote device.  
-                var bytesSent = handler.EndSend(ar);
-                _logger?.LogDebug("{b} bytes sent to client.", bytesSent);
-                handler.Shutdown(SocketShutdown.Both);
-                handler.Close();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
+            OnSessionDisconnected?.Invoke(sender, e);
+        }
+
+        private void OnWsSessionError(object sender, WsErrorEventArgs e)
+        {
+            _logger.LogError("WebSocket [{id}] session error: {e}", e.Id, e.Error);
+            OnSessionError?.Invoke(sender, e);
+        }
+
+        private void OnWsServerError(object sender, WsErrorEventArgs e)
+        {
+            _logger.LogError("WebSocket [{id}] server error: {e}", e.Id, e.Error);
+            OnServerError?.Invoke(sender, e);
         }
     }
 }
