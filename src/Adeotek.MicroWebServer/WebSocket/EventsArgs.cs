@@ -73,17 +73,4 @@ namespace Adeotek.MicroWebServer.WebSocket
             Pending = pending;
         }
     }
-
-    public class TextMessageEventArgs : EventArgs
-    {
-        public readonly string Message;
-
-        public readonly Guid SessionId;
-
-        public TextMessageEventArgs(Guid sessionId, string message)
-        {
-            SessionId = sessionId;
-            Message = message;
-        }
-    }
 }

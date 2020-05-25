@@ -8,28 +8,28 @@ using System.Threading;
 
 namespace Adeotek.MicroWebServer.WebSocket
 {
-    public class Server : IWebSocket
+    public class WsServer : IWebSocketEvents
     {
-        public delegate void ServerSocketErrorDelegate(object sender, SocketErrorEventArgs e);
-
         // events
+        public delegate void SessionConnectedDelegate(object sender, ConnectionEventArgs e);
+        public delegate void SessionDisconnectedDelegate(object sender, ConnectionEventArgs e);
+        public delegate void ServerSocketErrorDelegate(object sender, SocketErrorEventArgs e);
         public delegate void ServerStartedDelegate(object sender, ServerStateEventArgs e);
-
         public delegate void ServerStoppedDelegate(object sender, ServerStateEventArgs e);
 
+        public event SessionConnectedDelegate OnSessionConnected;
+        public event SessionDisconnectedDelegate OnSessionDisconnected;
         public event ServerStartedDelegate OnServerStarted;
         public event ServerStoppedDelegate OnServerStopped;
         public event ServerSocketErrorDelegate OnServerError;
-
-        public event Session.SessionConnectedDelegate OnSessionConnected;
-        public event Session.SessionDisconnectedDelegate OnSessionDisconnected;
-        public event Session.SessionErrorDelegate OnSessionError;
-        public event Session.RawMessageReceivedDelegate OnMessageReceived;
-        public event Session.MessageSentDelegate OnMessageSent;
-        public event Session.EmptyMessageDelegate OnEmptyMessage;
+        
+        public event WsSession.SessionErrorDelegate OnSessionError;
+        public event WsSession.RawMessageReceivedDelegate OnMessageReceived;
+        public event WsSession.MessageSentDelegate OnMessageSent;
+        public event WsSession.EmptyMessageDelegate OnEmptyMessage;
 
         // Server sessions
-        protected readonly ConcurrentDictionary<Guid, Session> Sessions = new ConcurrentDictionary<Guid, Session>();
+        protected readonly ConcurrentDictionary<Guid, WsSession> Sessions = new ConcurrentDictionary<Guid, WsSession>();
 
         internal readonly WebSocket WebSocket;
 
@@ -49,7 +49,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public Server(IPAddress address, int port) : this(new IPEndPoint(address, port))
+        public WsServer(IPAddress address, int port) : this(new IPEndPoint(address, port))
         {
         }
 
@@ -58,7 +58,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public Server(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port))
+        public WsServer(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port))
         {
         }
 
@@ -66,7 +66,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         ///     Initialize WebSocket server with a given IP endpoint
         /// </summary>
         /// <param name="endpoint">IP endpoint</param>
-        public Server(IPEndPoint endpoint)
+        public WsServer(IPEndPoint endpoint)
         {
             Id = Guid.NewGuid();
             Endpoint = endpoint;
@@ -168,16 +168,29 @@ namespace Adeotek.MicroWebServer.WebSocket
         ///     Create TCP session factory method
         /// </summary>
         /// <returns>TCP session</returns>
-        protected virtual Session CreateSession()
+        protected virtual WsSession CreateSession()
         {
-            var newSession = new Session(this);
+            var newSession = new WsSession(this);
 
-            if (OnSessionError != null) newSession.OnSessionError += OnSessionError;
-            if (OnSessionConnected != null) newSession.OnSessionConnected += OnSessionConnected;
-            if (OnSessionDisconnected != null) newSession.OnSessionDisconnected += OnSessionDisconnected;
-            if (OnMessageSent != null) newSession.OnMessageSent += OnMessageSent;
-            if (OnMessageReceived != null) newSession.OnMessageReceived += OnMessageReceived;
-            if (OnEmptyMessage != null) newSession.OnEmptyMessage += OnEmptyMessage;
+            if (OnSessionError != null)
+            {
+                newSession.OnSessionError += OnSessionError;
+            }
+
+            if (OnMessageSent != null)
+            {
+                newSession.OnMessageSent += OnMessageSent;
+            }
+
+            if (OnMessageReceived != null)
+            {
+                newSession.OnMessageReceived += OnMessageReceived;
+            }
+
+            if (OnEmptyMessage != null)
+            {
+                newSession.OnEmptyMessage += OnEmptyMessage;
+            }
 
             return newSession;
         }
@@ -198,7 +211,9 @@ namespace Adeotek.MicroWebServer.WebSocket
                 error == SocketError.ConnectionReset ||
                 error == SocketError.OperationAborted ||
                 error == SocketError.Shutdown)
+            {
                 return;
+            }
 
             OnError(error);
         }
@@ -225,7 +240,9 @@ namespace Adeotek.MicroWebServer.WebSocket
         {
             Debug.Assert(!IsStarted, "TCP server is already started!");
             if (IsStarted)
+            {
                 return false;
+            }
 
             // Setup acceptor event arg
             _acceptorEventArg = new SocketAsyncEventArgs();
@@ -245,12 +262,14 @@ namespace Adeotek.MicroWebServer.WebSocket
                 OptionExclusiveAddressUse);
             // Apply the option: dual mode (this option must be applied before listening)
             if (_acceptorSocket.AddressFamily == AddressFamily.InterNetworkV6)
+            {
                 _acceptorSocket.DualMode = OptionDualMode;
+            }
 
             // Bind the acceptor socket to the IP endpoint
             _acceptorSocket.Bind(Endpoint);
             // Refresh the endpoint property based on the actual endpoint created
-            Endpoint = (IPEndPoint) _acceptorSocket.LocalEndPoint;
+            Endpoint = (IPEndPoint)_acceptorSocket.LocalEndPoint;
             // Start listen to the acceptor socket with the given accepting backlog size
             _acceptorSocket.Listen(OptionAcceptorBacklog);
 
@@ -280,7 +299,9 @@ namespace Adeotek.MicroWebServer.WebSocket
         {
             Debug.Assert(IsStarted, "TCP server is not started!");
             if (!IsStarted)
+            {
                 return false;
+            }
 
             // Stop accepting new clients
             IsAccepting = false;
@@ -316,10 +337,14 @@ namespace Adeotek.MicroWebServer.WebSocket
         public virtual bool Restart()
         {
             if (!Stop())
+            {
                 return false;
+            }
 
             while (IsStarted)
+            {
                 Thread.Yield();
+            }
 
             return Start();
         }
@@ -347,7 +372,9 @@ namespace Adeotek.MicroWebServer.WebSocket
 
             // Async accept a new client connection
             if (!_acceptorSocket.AcceptAsync(e))
+            {
                 ProcessAccept(e);
+            }
         }
 
         /// <summary>
@@ -373,7 +400,9 @@ namespace Adeotek.MicroWebServer.WebSocket
 
             // Accept the next client connection
             if (IsAccepting)
+            {
                 StartAccept(e);
+            }
         }
 
         /// <summary>
@@ -396,11 +425,15 @@ namespace Adeotek.MicroWebServer.WebSocket
         public virtual bool DisconnectAll()
         {
             if (!IsStarted)
+            {
                 return false;
+            }
 
             // Disconnect all sessions
             foreach (var session in Sessions.Values)
+            {
                 session.Disconnect();
+            }
 
             return true;
         }
@@ -410,7 +443,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// </summary>
         /// <param name="id">Session Id</param>
         /// <returns>Session with a given Id or null if the session it not connected</returns>
-        public Session FindSession(Guid id)
+        public WsSession FindSession(Guid id)
         {
             // Try to find the required session
             return Sessions.TryGetValue(id, out var result) ? result : null;
@@ -420,7 +453,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         ///     Register a new session
         /// </summary>
         /// <param name="session">Session to register</param>
-        internal void RegisterSession(Session session)
+        internal void RegisterSession(WsSession session)
         {
             // Register a new session
             Sessions.TryAdd(session.Id, session);
@@ -459,15 +492,28 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <returns>'true' if the data was successfully broadcasted, 'false' if the data was not broadcasted</returns>
         public virtual bool Broadcast(byte[] buffer, long offset, long size)
         {
-            if (!IsStarted) return false;
+            if (!IsStarted)
+            {
+                return false;
+            }
 
-            if (size == 0) return true;
+            if (size == 0)
+            {
+                return true;
+            }
 
             // Multicast data to all WebSocket sessions
             foreach (var session in Sessions.Values)
             {
-                if (!(session is Session wsSession)) continue;
-                if (wsSession.WebSocket.WsHandshaked) wsSession.SendAsync(buffer, offset, size);
+                if (!(session is WsSession wsSession))
+                {
+                    continue;
+                }
+
+                if (wsSession.WebSocket.WsHandshaked)
+                {
+                    wsSession.SendAsync(buffer, offset, size);
+                }
             }
 
             return true;
@@ -587,7 +633,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         ///     Handle session connected notification
         /// </summary>
         /// <param name="session">Connected session</param>
-        protected virtual void OnConnected(Session session)
+        protected virtual void OnConnected(WsSession session)
         {
             OnSessionConnected?.Invoke(session, new ConnectionEventArgs(session.Id));
         }
@@ -596,7 +642,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         ///     Handle session disconnected notification
         /// </summary>
         /// <param name="session">Disconnected session</param>
-        protected virtual void OnDisconnected(Session session)
+        protected virtual void OnDisconnected(WsSession session)
         {
             OnSessionDisconnected?.Invoke(session, new ConnectionEventArgs(session.Id));
         }
@@ -610,12 +656,12 @@ namespace Adeotek.MicroWebServer.WebSocket
             OnServerError?.Invoke(this, new SocketErrorEventArgs(Guid.Empty, error));
         }
 
-        internal void OnConnectedInternal(Session session)
+        internal void OnConnectedInternal(WsSession session)
         {
             OnConnected(session);
         }
 
-        internal void OnDisconnectedInternal(Session session)
+        internal void OnDisconnectedInternal(WsSession session)
         {
             OnDisconnected(session);
         }
@@ -655,11 +701,16 @@ namespace Adeotek.MicroWebServer.WebSocket
             // refer to reference type fields because those objects may
             // have already been finalized."
 
-            if (IsDisposed) return;
+            if (IsDisposed)
+            {
+                return;
+            }
 
             if (disposingManagedResources)
+            {
                 // Dispose managed resources here...
                 Stop();
+            }
 
             // Dispose unmanaged resources here...
 
@@ -670,7 +721,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         }
 
         // Use C# destructor syntax for finalization code.
-        ~Server()
+        ~WsServer()
         {
             // Simply call Dispose(false).
             Dispose(false);

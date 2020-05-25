@@ -48,7 +48,7 @@ namespace Adeotek.MicroWebServer
             var prefixes = new List<string>();
             if (routes != null && routes.Count > 0)
             {
-                foreach(var r in routes)
+                foreach (var r in routes)
                 {
                     if (string.IsNullOrEmpty(r))
                     {

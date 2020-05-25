@@ -1,5 +1,4 @@
 ﻿using System;
-using Adeotek.MicroWebServer.WebSockets;
 using Microsoft.Extensions.Logging;
 
 namespace Adeotek.MicroWebServer.WorkerExample

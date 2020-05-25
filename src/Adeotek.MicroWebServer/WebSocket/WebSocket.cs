@@ -8,7 +8,7 @@ namespace Adeotek.MicroWebServer.WebSocket
     /// <summary>
     ///     WebSocket utility class
     /// </summary>
-    public class WebSocket : IWebSocket
+    public class WebSocket : IWebSocketEvents
     {
         /// <summary>
         ///     Final frame
@@ -40,7 +40,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// </summary>
         public const byte WS_PONG = 0x0A;
 
-        private readonly IWebSocket _wsHandler;
+        private readonly IWebSocketEvents _wsHandler;
 
         /// <summary>
         ///     Receive buffer
@@ -92,7 +92,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// </summary>
         internal bool WsReceived;
 
-        public WebSocket(IWebSocket wsHandler)
+        public WebSocket(IWebSocketEvents wsHandler)
         {
             _wsHandler = wsHandler;
             ClearWsBuffers();
@@ -106,7 +106,10 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <returns>'true' if the WebSocket was successfully upgrade, 'false' if the WebSocket was not upgrade</returns>
         public bool PerformClientUpgrade(Response response, Guid id)
         {
-            if (response.Status != 101) return false;
+            if (response.Status != 101)
+            {
+                return false;
+            }
 
             var error = false;
             var accept = false;
@@ -174,7 +177,10 @@ namespace Adeotek.MicroWebServer.WebSocket
             // Failed to perform WebSocket handshake
             if (!accept || !connection || !upgrade)
             {
-                if (!error) _wsHandler.OnWsError("Invalid WebSocket response");
+                if (!error)
+                {
+                    _wsHandler.OnWsError("Invalid WebSocket response");
+                }
 
                 return false;
             }
@@ -196,7 +202,10 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <returns>'true' if the WebSocket was successfully upgrade, 'false' if the WebSocket was not upgrade</returns>
         public bool PerformServerUpgrade(Request request, Response response)
         {
-            if (request.Method != "GET") return false;
+            if (request.Method != "GET")
+            {
+                return false;
+            }
 
             var error = false;
             var connection = false;
@@ -277,12 +286,18 @@ namespace Adeotek.MicroWebServer.WebSocket
             }
 
             // Filter out non WebSocket handshake requests
-            if (!connection && !upgrade && !wsKey && !wsVersion) return false;
+            if (!connection && !upgrade && !wsKey && !wsVersion)
+            {
+                return false;
+            }
 
             // Failed to perform WebSocket handshake
             if (!connection || !upgrade || !wsKey || !wsVersion)
             {
-                if (!error) response.MakeErrorResponse("Invalid WebSocket response", 400);
+                if (!error)
+                {
+                    response.MakeErrorResponse("Invalid WebSocket response", 400);
+                }
 
                 _wsHandler.SendResponse(response);
                 return false;
@@ -297,14 +312,17 @@ namespace Adeotek.MicroWebServer.WebSocket
             response.SetBody();
 
             // Validate WebSocket upgrade request and response
-            if (!_wsHandler.OnWsConnecting(request, response)) return false;
+            if (!_wsHandler.OnWsConnecting(request, response))
+            {
+                return false;
+            }
 
             // Send WebSocket upgrade response
             _wsHandler.SendResponse(response);
 
             // WebSocket successfully handshaked!
             WsHandshaked = true;
-            Array.Fill(WsSendMask, (byte) 0);
+            Array.Fill(WsSendMask, (byte)0);
             _wsHandler.OnWsConnected(request);
 
             return true;
@@ -330,18 +348,21 @@ namespace Adeotek.MicroWebServer.WebSocket
             // Append WebSocket frame size
             if (size <= 125)
             {
-                WsSendBuffer.Add((byte) (((int) size & 0xFF) | (mask ? 0x80 : 0)));
+                WsSendBuffer.Add((byte)(((int)size & 0xFF) | (mask ? 0x80 : 0)));
             }
             else if (size <= 65535)
             {
-                WsSendBuffer.Add((byte) (126 | (mask ? 0x80 : 0)));
-                WsSendBuffer.Add((byte) ((size >> 8) & 0xFF));
-                WsSendBuffer.Add((byte) (size & 0xFF));
+                WsSendBuffer.Add((byte)(126 | (mask ? 0x80 : 0)));
+                WsSendBuffer.Add((byte)((size >> 8) & 0xFF));
+                WsSendBuffer.Add((byte)(size & 0xFF));
             }
             else
             {
-                WsSendBuffer.Add((byte) (127 | (mask ? 0x80 : 0)));
-                for (var i = 7; i >= 0; --i) WsSendBuffer.Add((byte) ((size >> (8 * i)) & 0xFF));
+                WsSendBuffer.Add((byte)(127 | (mask ? 0x80 : 0)));
+                for (var i = 7; i >= 0; --i)
+                {
+                    WsSendBuffer.Add((byte)((size >> (8 * i)) & 0xFF));
+                }
             }
 
             if (mask)
@@ -359,7 +380,9 @@ namespace Adeotek.MicroWebServer.WebSocket
 
             // Mask WebSocket frame content
             for (var i = 0; i < size; ++i)
-                WsSendBuffer[bufferOffset + i] = (byte) (buffer[offset + i] ^ WsSendMask[i % 4]);
+            {
+                WsSendBuffer[bufferOffset + i] = (byte)(buffer[offset + i] ^ WsSendMask[i % 4]);
+            }
         }
 
         /// <summary>
@@ -398,14 +421,19 @@ namespace Adeotek.MicroWebServer.WebSocket
 
                     // Prepare WebSocket frame opcode and mask flag
                     if (WsReceiveBuffer.Count < 2)
+                    {
                         for (var i = 0; i < 2; ++i, ++index, --size)
                         {
-                            if (size == 0) return;
+                            if (size == 0)
+                            {
+                                return;
+                            }
 
                             WsReceiveBuffer.Add(buffer[offset + index]);
                         }
+                    }
 
-                    var opcode = (byte) (WsReceiveBuffer[0] & 0x0F);
+                    var opcode = (byte)(WsReceiveBuffer[0] & 0x0F);
                     var fin = ((WsReceiveBuffer[0] >> 7) & 0x01) != 0;
                     var mask = ((WsReceiveBuffer[1] >> 7) & 0x01) != 0;
                     var payload = WsReceiveBuffer[1] & ~0x80;
@@ -420,12 +448,17 @@ namespace Adeotek.MicroWebServer.WebSocket
                     else if (payload == 126)
                     {
                         if (WsReceiveBuffer.Count < 4)
+                        {
                             for (var i = 0; i < 2; ++i, ++index, --size)
                             {
-                                if (size == 0) return;
+                                if (size == 0)
+                                {
+                                    return;
+                                }
 
                                 WsReceiveBuffer.Add(buffer[offset + index]);
                             }
+                        }
 
                         payload = (WsReceiveBuffer[2] << 8) | (WsReceiveBuffer[3] << 0);
                         WsHeaderSize = 4 + (mask ? 4 : 0);
@@ -435,12 +468,17 @@ namespace Adeotek.MicroWebServer.WebSocket
                     else if (payload == 127)
                     {
                         if (WsReceiveBuffer.Count < 10)
+                        {
                             for (var i = 0; i < 8; ++i, ++index, --size)
                             {
-                                if (size == 0) return;
+                                if (size == 0)
+                                {
+                                    return;
+                                }
 
                                 WsReceiveBuffer.Add(buffer[offset + index]);
                             }
+                        }
 
                         payload = (WsReceiveBuffer[2] << 56) | (WsReceiveBuffer[3] << 48) | (WsReceiveBuffer[4] << 40) |
                                   (WsReceiveBuffer[5] << 32) | (WsReceiveBuffer[6] << 24) | (WsReceiveBuffer[7] << 16) |
@@ -452,20 +490,27 @@ namespace Adeotek.MicroWebServer.WebSocket
 
                     // Prepare WebSocket frame mask
                     if (mask)
+                    {
                         if (WsReceiveBuffer.Count < WsHeaderSize)
+                        {
                             for (var i = 0; i < 4; ++i, ++index, --size)
                             {
-                                if (size == 0) return;
+                                if (size == 0)
+                                {
+                                    return;
+                                }
 
                                 WsReceiveBuffer.Add(buffer[offset + index]);
                                 WsReceiveMask[i] = buffer[offset + index];
                             }
+                        }
+                    }
 
                     var total = WsHeaderSize + WsPayloadSize;
-                    var length = Math.Min(total - WsReceiveBuffer.Count, (int) size);
+                    var length = Math.Min(total - WsReceiveBuffer.Count, (int)size);
 
                     // Prepare WebSocket frame payload
-                    WsReceiveBuffer.AddRange(buffer[((int) offset + index)..((int) offset + index + length)]);
+                    WsReceiveBuffer.AddRange(buffer[((int)offset + index)..((int)offset + index + length)]);
                     index += length;
                     size -= length;
 
@@ -476,23 +521,35 @@ namespace Adeotek.MicroWebServer.WebSocket
 
                         // Unmask WebSocket frame content
                         if (mask)
+                        {
                             for (var i = 0; i < WsPayloadSize; ++i)
+                            {
                                 WsReceiveBuffer[bufferOffset + i] ^= WsReceiveMask[i % 4];
+                            }
+                        }
 
                         WsReceived = true;
 
                         if ((opcode & WS_PING) == WS_PING)
+                        {
                             // Call the WebSocket ping handler
                             _wsHandler.OnWsPing(WsReceiveBuffer.ToArray(), bufferOffset, WsPayloadSize);
+                        }
                         else if ((opcode & WS_PONG) == WS_PONG)
+                        {
                             // Call the WebSocket pong handler
                             _wsHandler.OnWsPong(WsReceiveBuffer.ToArray(), bufferOffset, WsPayloadSize);
+                        }
                         else if ((opcode & WS_CLOSE) == WS_CLOSE)
+                        {
                             // Call the WebSocket close handler
                             _wsHandler.OnWsClose(WsReceiveBuffer.ToArray(), bufferOffset, WsPayloadSize);
+                        }
                         else if ((opcode & WS_TEXT) == WS_TEXT || (opcode & WS_BINARY) == WS_BINARY)
+                        {
                             // Call the WebSocket received handler
                             _wsHandler.OnWsReceived(WsReceiveBuffer.ToArray(), bufferOffset, WsPayloadSize);
+                        }
                     }
                 }
             }
@@ -505,21 +562,36 @@ namespace Adeotek.MicroWebServer.WebSocket
         {
             lock (WsReceiveLock)
             {
-                if (WsReceived) return 0;
+                if (WsReceived)
+                {
+                    return 0;
+                }
 
                 // Required WebSocket frame opcode and mask flag
-                if (WsReceiveBuffer.Count < 2) return 2 - WsReceiveBuffer.Count;
+                if (WsReceiveBuffer.Count < 2)
+                {
+                    return 2 - WsReceiveBuffer.Count;
+                }
 
                 var mask = ((WsReceiveBuffer[1] >> 7) & 0x01) != 0;
                 var payload = WsReceiveBuffer[1] & ~0x80;
 
                 // Required WebSocket frame size
-                if (payload == 126 && WsReceiveBuffer.Count < 4) return 4 - WsReceiveBuffer.Count;
+                if (payload == 126 && WsReceiveBuffer.Count < 4)
+                {
+                    return 4 - WsReceiveBuffer.Count;
+                }
 
-                if (payload == 127 && WsReceiveBuffer.Count < 10) return 10 - WsReceiveBuffer.Count;
+                if (payload == 127 && WsReceiveBuffer.Count < 10)
+                {
+                    return 10 - WsReceiveBuffer.Count;
+                }
 
                 // Required WebSocket frame mask
-                if (mask && WsReceiveBuffer.Count < WsHeaderSize) return WsHeaderSize - WsReceiveBuffer.Count;
+                if (mask && WsReceiveBuffer.Count < WsHeaderSize)
+                {
+                    return WsHeaderSize - WsReceiveBuffer.Count;
+                }
 
                 // Required WebSocket frame payload
                 return WsHeaderSize + WsPayloadSize - WsReceiveBuffer.Count;

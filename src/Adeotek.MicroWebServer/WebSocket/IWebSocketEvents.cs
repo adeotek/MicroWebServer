@@ -2,7 +2,7 @@
 
 namespace Adeotek.MicroWebServer.WebSocket
 {
-    public interface IWebSocket
+    public interface IWebSocketEvents
     {
         /// <summary>
         ///     Handle WebSocket client connecting notification
