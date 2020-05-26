@@ -1,26 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
+using Adeotek.MicroWebServer.WebSocket;
 using Microsoft.Extensions.Logging;
 
 namespace Adeotek.MicroWebServer.WorkerExample
 {
-    class WebServerWorker : WorkerBase
+    class WebSocketServerWorker : WorkerBase
     {
-        private readonly MicroHttpServer _webServer;
+        private readonly WebSocketServer _wsServer;
 
-        public WebServerWorker(ILogger logger, int workerId, bool autoStart = false)
+        public WebSocketServerWorker(ILogger logger, int workerId, bool autoStart = false)
         {
             _workerId = workerId;
             _logger = logger;
-            _webServer = new MicroHttpServer(
-                requestResponderMethod: ProcessWebRequest,
-                routes: new List<string>() { "hello/" },
-                host: "localhost",
+            _wsServer = new WebSocketServer(
+                ipAddress: "127.0.0.1",
                 port: 8080,
-                responseType: ResponseTypes.Text,
-                utf8: true,
-                crossDomains: new List<string>() { "*" },
+                messageConsumerMethod: ProcessWsMessage,
                 logger: _logger
             );
             if (autoStart)
@@ -29,15 +24,15 @@ namespace Adeotek.MicroWebServer.WorkerExample
             }
         }
 
-        public override bool IsRunning => (_webServer?.IsRunning ?? false) || _starting;
+        public override bool IsRunning => (_wsServer?.IsRunning ?? false) || _starting;
 
         protected override void WorkerLoop()
         {
             try
             {
-                if (!_webServer.IsRunning)
+                if (!_wsServer.IsRunning)
                 {
-                    _webServer.Start();
+                    _wsServer.Start();
                 }
                 OnStart();
                 IsWorking = true;
@@ -53,7 +48,7 @@ namespace Adeotek.MicroWebServer.WorkerExample
         {
             try
             {
-                _webServer?.Stop();
+                _wsServer?.Stop();
                 IsWorking = false;
                 OnStop();
             }
@@ -65,10 +60,10 @@ namespace Adeotek.MicroWebServer.WorkerExample
             
         }
 
-        private string ProcessWebRequest(HttpListenerRequest request)
+        private void ProcessWsMessage(WsSession session, string message)
         {
-            _logger.LogInformation("Request received: {url}", request.RawUrl);
-            return "Hello world!";
+            _logger.LogInformation("Message received from [{id}]: {msg}", session.Id, message);
+            session.SendAsync(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
         }
     }
 }

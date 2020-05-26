@@ -4,9 +4,10 @@ namespace Adeotek.MicroWebServer
 {
     public interface IWorker : IDisposable
     {
-        bool IsRunning();
+        bool IsRunning { get; }
+        bool IsWorking { get; }
         bool Start();
-        bool Stop(bool dispose = false);
+        bool Stop(bool restart = false, bool dispose = false);
         bool Restart();
     }
 }

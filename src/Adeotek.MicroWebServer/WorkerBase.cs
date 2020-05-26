@@ -4,17 +4,56 @@ using Microsoft.Extensions.Logging;
 
 namespace Adeotek.MicroWebServer
 {
+    public class WorkerStateEventArgs : EventArgs
+    {
+        public readonly int WorkerId;
+        public readonly bool IsStarted;
+        public readonly bool Restart;
+        public readonly bool Dispose;
+
+        public WorkerStateEventArgs(int workerId, bool isStarted, bool restart = false, bool dispose = false)
+        {
+            WorkerId = workerId;
+            IsStarted = isStarted;
+            Restart = restart;
+            Dispose = dispose;
+        }
+    }
+
+    public class WorkerJobEventArgs : EventArgs
+    {
+        public readonly int WorkerId;
+        public readonly bool Executed;
+        public readonly bool Result;
+
+        public WorkerJobEventArgs(int workerId, bool result = false, bool executed = true)
+        {
+            WorkerId = workerId;
+            Executed = executed;
+            Result = result;
+
+        }
+    }
+
     public abstract class WorkerBase : IWorker
     {
-        protected bool _restart;
-        protected bool _stop;
-        protected bool _dispose;
-        protected int _workerId;
         protected Thread _thread;
         protected ILogger _logger;
+        protected int _workerId;
+        protected bool _stop;
+        protected bool _restart;
+        protected bool _dispose;
+        protected bool _running;
+        protected bool _starting;
 
-        public delegate void NewMessage(object sender, string message);
-        public event NewMessage OnNewMessage;
+        public delegate void WorkerStartedDelegate(object sender, WorkerStateEventArgs e);
+        public delegate void WorkerStoppedDelegate(object sender, WorkerStateEventArgs e);
+        public delegate void WorkerJobStartingDelegate(object sender, WorkerJobEventArgs e);
+        public delegate void WorkerJobExecutedDelegate(object sender, WorkerJobEventArgs e);
+        public event WorkerStartedDelegate OnWorkerStarted;
+        public event WorkerStoppedDelegate OnWorkerStopped;
+        public event WorkerJobStartingDelegate OnWorkerJobStarting;
+        public event WorkerJobExecutedDelegate OnWorkerJobExecuted;
 
         /// <summary>
         /// Loop sleep interval in milliseconds
@@ -32,22 +71,20 @@ namespace Adeotek.MicroWebServer
         public double IntervalUntilNextRun { get; protected set; } = 0;
 
         /// <summary>
-        /// Worker task state property
-        /// </summary>
-        public bool Working { get; protected set; }
-
-        /// <summary>
         /// Gets the Worker state
         /// </summary>
-        public bool IsRunning()
-        {
-            return _thread?.IsAlive ?? Working;
-        }
+        public virtual bool IsRunning => (_thread?.IsAlive ?? false) && _running || _starting;
+
+        /// <summary>
+        /// Worker task state property
+        /// </summary>
+        public bool IsWorking { get; protected set; }
 
         public bool Start()
         {
+            _starting = true;
             _thread ??= new Thread(WorkerLoop) { IsBackground = true };
-            if (Working || (_thread.IsAlive && _thread.ThreadState != (ThreadState.Background | ThreadState.Unstarted)))
+            if (_running && _thread.IsAlive && _thread.ThreadState != (ThreadState.Background | ThreadState.Unstarted))
             {
                 return true;
             }
@@ -55,41 +92,44 @@ namespace Adeotek.MicroWebServer
             return true;
         }
 
-        public bool Stop(bool dispose = false)
+        public bool Stop(bool restart = false, bool dispose = false)
         {
-            _restart = false;
+            _restart = restart;
             _dispose = dispose;
-            EndWorkerLoop();
+
             if (_thread == null)
             {
-                //OnStop(dispose);
+                OnStop();
                 return true;
             }
 
-            if (_thread != null && (_thread.ThreadState == (ThreadState.Background | ThreadState.Running)
-                                   || _thread.ThreadState == ThreadState.Background
-                                   || (_thread.ThreadState == ThreadState.Stopped && Working)))
+            if (_thread != null && (IsWorking || _thread.ThreadState == (ThreadState.Background | ThreadState.Running) || _thread.ThreadState == ThreadState.Background))
             {
-                //OnStop(dispose);
+                EndWorkerLoop();
                 return false;
             }
 
-            if (_thread != null && (_thread.ThreadState == ThreadState.Stopped || _thread.ThreadState == (ThreadState.Background | ThreadState.Unstarted)) && !Working)
-            {
-                _thread = null;
-
-            }
+            _thread = null;
+            OnStop();
             return true;
         }
 
         public bool Restart()
         {
+            return Stop(true);
+        }
+
+        protected virtual bool ExecuteJob()
+        {
+            _logger?.LogError("{type}::ExecuteJob method not implemented!", GetType().Name);
             return true;
         }
 
         protected virtual void WorkerLoop()
         {
+            OnStart();
             InternalWorkerLoop();
+            OnStop();
         }
 
         protected virtual void EndWorkerLoop()
@@ -97,27 +137,8 @@ namespace Adeotek.MicroWebServer
             _stop = true;
         }
 
-        protected virtual void ExecuteJob()
-        {
-            _logger.LogError("{type}::ExecuteJob method not implemented!", GetType().Name);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
         protected void InternalWorkerLoop()
         {
-            _logger.LogInformation("Starting {type} loop...", GetType().Name);
             while (!_stop)
             {
                 if (IntervalUntilNextRun >= 0)
@@ -126,34 +147,59 @@ namespace Adeotek.MicroWebServer
                     IntervalUntilNextRun -= (double) LoopInterval / 1000;
                     continue;
                 }
-                Working = true;
+                IsWorking = true;
                 try
                 {
-                    ExecuteJob();
-                    OnNewMessage?.Invoke(this, $"Job executed at: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
+                    OnWorkerJobStarting?.Invoke(this, new WorkerJobEventArgs(_workerId, false, false));
+                    var result = ExecuteJob();
+                    OnWorkerJobExecuted?.Invoke(this, new WorkerJobEventArgs(_workerId, result));
                 }
                 catch (ThreadAbortException ex)
                 {
                     _stop = true;
-                    _logger.LogWarning(ex, "{type} ThreadAbortException caught", GetType().Name);
+                    _logger?.LogWarning(ex, "{type} ThreadAbortException caught", GetType().Name);
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "{type} exception caught", GetType().Name);
+                    _logger?.LogError(e, "{type} exception caught", GetType().Name);
                 }
                 finally
                 {
-                    Working = false;
+                    IsWorking = false;
                 }
                 if (!_stop)
                 {
                     IntervalUntilNextRun = RunInterval > 0 ? RunInterval : -1;
                 }
             }
-            _logger.LogInformation("Stopping {type} loop...", GetType().Name);
-            //eventAggregator.PublishOnBackgroundThreadAsync(new WorkerEventArgs()
-            //{ Id = _workerId, IsRestart = restart, Exit = Exit });
-            _stop = _restart = false;
+        }
+
+        protected void OnStart()
+        {
+            _logger?.LogInformation("Starting {type} loop...", GetType().Name);
+            _running = true;
+            _starting = false;
+            OnWorkerStarted?.Invoke(this, new WorkerStateEventArgs(_workerId, true));
+        }
+
+        protected void OnStop()
+        {
+            _logger?.LogInformation("Stopping {type} loop...", GetType().Name);
+            _running = false;
+            var e = new WorkerStateEventArgs(_workerId, false, _restart, _dispose);
+            OnWorkerStopped?.Invoke(this, e);
+            _dispose = _stop = _restart = false;
+            if (e.Restart)
+            {
+                Start();
+            }
+        }
+
+        public void Dispose()
+        {
+            _stop = true;
+            _thread.Abort();
+            _thread = null;
         }
     }
 }

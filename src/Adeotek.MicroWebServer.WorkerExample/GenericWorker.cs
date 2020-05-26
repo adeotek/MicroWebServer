@@ -15,7 +15,7 @@ namespace Adeotek.MicroWebServer.WorkerExample
             }
         }
 
-        protected override void ExecuteJob()
+        protected override bool ExecuteJob()
         {
             _logger.LogDebug("{type} [workerId:{id}] - ExecuteJob triggered...", GetType().Name, _workerId);
 
@@ -35,6 +35,7 @@ namespace Adeotek.MicroWebServer.WorkerExample
             }
 
             _logger.LogDebug("{type} [workerId:{id}] - ExecuteJob finished...", GetType().Name, _workerId);
+            return true;
         }
     }
 }

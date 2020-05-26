@@ -5,12 +5,12 @@ namespace Adeotek.MicroWebServer.WorkerExample
 {
     class Program
     {
-        static ILogger logger;
-        //private static Server worker;
+        static ILogger _logger;
 
         static void Main(string[] args)
         {
             ConsoleKeyInfo cki;
+
             var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
@@ -19,46 +19,41 @@ namespace Adeotek.MicroWebServer.WorkerExample
                     .AddFilter("System", LogLevel.Warning)
                     .AddConsole();
             });
-            logger = loggerFactory.CreateLogger<Program>();
+            _logger = loggerFactory.CreateLogger<Program>();
+            _logger.LogInformation("Preparing the Worker...");
 
-            logger.LogInformation("Preparing the Worker...");
 
-            //var worker = new WebServerWorker(logger, 1);
+            //// Generic Worker example
+            var worker = new GenericWorker(_logger, 1) { RunInterval = 5.5 };
+            worker.OnWorkerJobExecuted += (sender, e) =>
+            {
+                _logger.LogInformation("Job done with result: ", e.Result.ToString());
+            };
+            worker.Start();
+
+
+            //// MicroHttpServer Worker example
+            //var worker = new WebServerWorker(_logger, 2);
             //worker.Start();
 
-            //var worker = new GenericWorker(logger, 2) { RunInterval = 5.5 };
-            //worker.OnNewMessage += (sender, message) =>
-            //{
-            //    logger.LogInformation(message);
-            //};
 
-            //var worker = new Server("127.0.0.1", 8080, logger);
-            //worker.OnNewMessage += OnMessageHandler;
-
-            //var worker = new WebSocketServer("127.0.0.1", 8080, logger);
-
-            //logger.LogInformation($"Starting {worker.GetType().Name}. \nCTRL+S to stop the Worker and exit.");
+            //// WebSocketServer Worker example
+            //var worker = new WebSocketServerWorker(_logger, 3);
             //worker.Start();
 
-            //while (worker.IsRunning)
-            //{
-            //    cki = Console.ReadKey(true);
-            //    if (cki.Key != ConsoleKey.S)
-            //    {
-            //        continue;
-            //    }
-            //    logger.LogInformation("Initiating Worker.Stop()...");
-            //    //worker.Stop(true);
-            //    break;
-            //}
+
+            _logger.LogInformation($"Worker [{worker.GetType().Name}] started. \nCTRL+S to stop the Worker and exit.");
+            while (worker.IsRunning)
+            {
+                cki = Console.ReadKey(true);
+                if (cki.Key != ConsoleKey.S)
+                {
+                    continue;
+                }
+                _logger.LogInformation("Initiating Worker.Stop()...");
+                worker.Stop(false,true);
+                break;
+            }
         }
-
-
-        //public static void OnMessageHandler(object sender, WebSocketMessageEventArgs e)
-        //{
-        //    logger.LogInformation("New message received from [{id}]: \n{text}", e.ClientId, e.Message);
-        //    worker.SendMessageAsync($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {e.Message}", e.ClientId);
-        //}
-
     }
 }

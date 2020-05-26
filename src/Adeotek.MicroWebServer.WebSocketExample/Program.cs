@@ -26,7 +26,8 @@ namespace Adeotek.MicroWebServer.WebSocketExample
                 ipAddress: "127.0.0.1",
                 port: 8080,
                 messageConsumerMethod: ProcessWebRequest,
-                logger: _logger);
+                logger: _logger
+            );
             server.Start();
 
             _logger.LogInformation("Press Enter to stop the server or '!' to restart the server...");
