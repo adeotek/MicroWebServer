@@ -7,10 +7,11 @@ namespace Adeotek.MicroWebServer.Example
 {
     class Program
     {
-        static ILogger logger;
+        static ILogger _logger;
         static void Main(string[] args)
         {
             ConsoleKeyInfo cki;
+
             var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
@@ -19,9 +20,8 @@ namespace Adeotek.MicroWebServer.Example
                     .AddFilter("System", LogLevel.Warning)
                     .AddConsole();
             });
-            logger = loggerFactory.CreateLogger<Program>();
-
-            logger.LogInformation("Preparing the MicroWebServer...");
+            _logger = loggerFactory.CreateLogger<Program>();
+            _logger.LogInformation("Preparing the MicroWebServer...");
 
             var microWebServer = new MicroHttpServer(
                 requestResponderMethod: ProcessWebRequest,
@@ -31,7 +31,7 @@ namespace Adeotek.MicroWebServer.Example
                 responseType: ResponseTypes.Text,
                 utf8: true,
                 crossDomains: new List<string>() { "*" },
-                logger: logger
+                logger: _logger
                 );
             microWebServer.Start();
 
@@ -46,9 +46,9 @@ namespace Adeotek.MicroWebServer.Example
             }
         }
 
-        public static string ProcessWebRequest(HttpListenerRequest request)
+        static string ProcessWebRequest(HttpListenerRequest request)
         {
-            logger.LogInformation("Request received: {url}", request.RawUrl);
+            _logger.LogInformation("Request received: {url}", request.RawUrl);
             return "Hello world!";
         }
     }
