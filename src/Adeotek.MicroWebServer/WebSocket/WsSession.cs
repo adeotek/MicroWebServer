@@ -695,7 +695,7 @@ namespace Adeotek.MicroWebServer.WebSocket
 
         #endregion
 
-        #region WebSocket send text methods
+        #region WebSocket send methods
 
         public long Send(byte[] buffer, long offset, long size)
         {

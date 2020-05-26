@@ -49,6 +49,7 @@ namespace Adeotek.MicroWebServer
         }
 
         public bool IsRunning => _server.IsStarted;
+        public bool IsAccepting => _server.IsAccepting;
 
         public bool Start()
         {
@@ -65,7 +66,7 @@ namespace Adeotek.MicroWebServer
             return _server?.Restart() ?? false;
         }
 
-        public bool BroadcastText(string text)
+        public bool Broadcast(string text)
         {
             return _server?.Broadcast(text) ?? false;
         }

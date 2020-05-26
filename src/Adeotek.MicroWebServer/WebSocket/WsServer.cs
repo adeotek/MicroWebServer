@@ -498,7 +498,7 @@ namespace Adeotek.MicroWebServer.WebSocket
                 return true;
             }
 
-            // Multicast data to all WebSocket sessions
+            // Broadcast data to all WebSocket sessions
             foreach (var session in Sessions.Values)
             {
                 if (!(session is WsSession wsSession))
@@ -515,6 +515,11 @@ namespace Adeotek.MicroWebServer.WebSocket
             return true;
         }
 
+        /// <summary>
+        ///     Broadcast to all connected clients
+        /// </summary>
+        /// <param name="text">Text string to broadcast</param>
+        /// <returns>'true' if the text was successfully broadcasted, 'false' if the text was not broadcasted</returns>
         public bool Broadcast(byte[] buffer, long offset, long size)
         {
             lock (WebSocket.WsSendLock)

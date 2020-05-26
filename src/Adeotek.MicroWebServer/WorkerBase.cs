@@ -47,8 +47,7 @@ namespace Adeotek.MicroWebServer
         public bool Start()
         {
             _thread ??= new Thread(WorkerLoop) { IsBackground = true };
-            //if (!Working && _thread.ThreadState == (ThreadState.Background | ThreadState.Unstarted))
-            if (Working || _thread.IsAlive)
+            if (Working || (_thread.IsAlive && _thread.ThreadState != (ThreadState.Background | ThreadState.Unstarted)))
             {
                 return true;
             }

@@ -45,7 +45,7 @@ namespace Adeotek.MicroWebServer.WebSocketExample
 
                 // Broadcast server message to all sessions
                 line = "(server) " + line;
-                server.BroadcastText(line);
+                server.Broadcast(line);
             }
             server.Dispose();
         }
