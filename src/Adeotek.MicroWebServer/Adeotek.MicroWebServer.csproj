@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>Adeotek.MicroWebServer</AssemblyName>
     <PackageId>Adeotek.MicroWebServer</PackageId>
     <PackageTags>http,webserver,embedded,micro</PackageTags>
@@ -12,8 +12,8 @@
     <Authors>George Benjamin-Schonberger</Authors>
     <Company>George Benjamin-Schonberger</Company>
     <Copyright>George Benjamin-Schonberger 2020</Copyright>
-    <AssemblyVersion>1.0.0.1</AssemblyVersion>
-    <FileVersion>1.0.0.1</FileVersion>
+    <AssemblyVersion>1.0.0.3</AssemblyVersion>
+    <FileVersion>1.0.0.3</FileVersion>
     <PackageIcon>logo_128_128.png</PackageIcon>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -22,6 +22,7 @@
     <MinVerVerbosity>diag</MinVerVerbosity>
     <MinVerTagPrefix>v</MinVerTagPrefix>
     <MinVerSkip Condition="'$(Configuration)' == 'Debug'">true</MinVerSkip>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.3" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="MinVer" Version="2.2.0">
