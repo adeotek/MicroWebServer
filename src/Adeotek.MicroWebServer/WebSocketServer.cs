@@ -67,7 +67,7 @@ namespace Adeotek.MicroWebServer
 
         public bool BroadcastText(string text)
         {
-            return _server?.BroadcastText(text) ?? false;
+            return _server?.Broadcast(text) ?? false;
         }
 
         private void OnWsMessageReceived(object sender, RawMessageEventArgs e)

@@ -8,18 +8,18 @@ namespace Adeotek.MicroWebServer.WebSocket
 {
     public class WsSession : IWebSocketEvents
     {
-        private Buffer _receiveBuffer;
-        private SocketAsyncEventArgs _receiveEventArg;
+        protected Buffer _receiveBuffer;
+        protected SocketAsyncEventArgs _receiveEventArg;
 
         // Receive buffer
-        private bool _receiving;
-        private Buffer _sendBufferFlush;
-        private long _sendBufferFlushOffset;
-        private Buffer _sendBufferMain;
-        private SocketAsyncEventArgs _sendEventArg;
-        private bool _sending;
+        protected bool _receiving;
+        protected Buffer _sendBufferFlush;
+        protected long _sendBufferFlushOffset;
+        protected Buffer _sendBufferMain;
+        protected SocketAsyncEventArgs _sendEventArg;
+        protected bool _sending;
         // Send buffer
-        private readonly object _sendLock = new object();
+        protected readonly object _sendLock = new object();
 
         internal readonly WebSocket WebSocket;
 
@@ -110,7 +110,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         ///     Send error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        private void SendError(SocketError error)
+        protected void SendError(SocketError error)
         {
             // Skip disconnect errors
             if (error == SocketError.ConnectionAborted ||
@@ -274,9 +274,9 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// </summary>
         /// <param name="buffer">Buffer to send</param>
         /// <returns>Size of sent data</returns>
-        public virtual long Send(byte[] buffer)
+        internal virtual long SendData(byte[] buffer)
         {
-            return Send(buffer, 0, buffer.Length);
+            return SendData(buffer, 0, buffer.Length);
         }
 
         /// <summary>
@@ -286,7 +286,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>Size of sent data</returns>
-        public virtual long Send(byte[] buffer, long offset, long size)
+        internal virtual long SendData(byte[] buffer, long offset, long size)
         {
             if (!IsConnected)
             {
@@ -320,24 +320,14 @@ namespace Adeotek.MicroWebServer.WebSocket
             return sent;
         }
 
-        ///// <summary>
-        /////     Send text to the client (synchronous)
-        ///// </summary>
-        ///// <param name="text">Text string to send</param>
-        ///// <returns>Size of sent data</returns>
-        //public virtual long Send(string text)
-        //{
-        //    return Send(Encoding.UTF8.GetBytes(text));
-        //}
-
         /// <summary>
         ///     Send data to the client (asynchronous)
         /// </summary>
         /// <param name="buffer">Buffer to send</param>
         /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
-        public virtual bool SendAsync(byte[] buffer)
+        internal virtual bool SendDataAsync(byte[] buffer)
         {
-            return SendAsync(buffer, 0, buffer.Length);
+            return SendDataAsync(buffer, 0, buffer.Length);
         }
 
         /// <summary>
@@ -347,7 +337,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
-        public virtual bool SendAsync(byte[] buffer, long offset, long size)
+        internal virtual bool SendDataAsync(byte[] buffer, long offset, long size)
         {
             if (!IsConnected)
             {
@@ -383,26 +373,6 @@ namespace Adeotek.MicroWebServer.WebSocket
             return true;
         }
 
-        ///// <summary>
-        /////     Send text to the client (asynchronous)
-        ///// </summary>
-        ///// <param name="text">Text string to send</param>
-        ///// <returns>'true' if the text was successfully sent, 'false' if the session is not connected</returns>
-        //public virtual bool SendAsync(string text)
-        //{
-        //    return SendAsync(Encoding.UTF8.GetBytes(text));
-        //}
-
-        /// <summary>
-        ///     Receive data from the client (synchronous)
-        /// </summary>
-        /// <param name="buffer">Buffer to receive</param>
-        /// <returns>Size of received data</returns>
-        public virtual long Receive(byte[] buffer)
-        {
-            return Receive(buffer, 0, buffer.Length);
-        }
-
         /// <summary>
         ///     Receive data from the client (synchronous)
         /// </summary>
@@ -410,7 +380,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>Size of received data</returns>
-        public virtual long Receive(byte[] buffer, long offset, long size)
+        internal virtual long ReceiveData(byte[] buffer, long offset, long size)
         {
             if (!IsConnected)
             {
@@ -444,31 +414,10 @@ namespace Adeotek.MicroWebServer.WebSocket
             return received;
         }
 
-        ///// <summary>
-        /////     Receive text from the client (synchronous)
-        ///// </summary>
-        ///// <param name="size">Text size to receive</param>
-        ///// <returns>Received text</returns>
-        //public virtual string Receive(long size)
-        //{
-        //    var buffer = new byte[size];
-        //    var length = Receive(buffer);
-        //    return Encoding.UTF8.GetString(buffer, 0, (int)length);
-        //}
-
-        ///// <summary>
-        /////     Receive data from the client (asynchronous)
-        ///// </summary>
-        //public virtual void ReceiveAsync()
-        //{
-        //    // Try to receive data from the client
-        //    TryReceive();
-        //}
-
         /// <summary>
         ///     Try to receive new data
         /// </summary>
-        private void TryReceive()
+        protected void TryReceive()
         {
             if (_receiving)
             {
@@ -505,7 +454,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <summary>
         ///     Try to send pending data
         /// </summary>
-        private void TrySend()
+        protected void TrySend()
         {
             if (_sending)
             {
@@ -576,7 +525,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <summary>
         ///     Clear send/receive buffers
         /// </summary>
-        private void ClearBuffers()
+        protected void ClearBuffers()
         {
             lock (_sendLock)
             {
@@ -598,7 +547,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <summary>
         ///     This method is called whenever a receive or send operation is completed on a socket
         /// </summary>
-        private void OnAsyncCompleted(object sender, SocketAsyncEventArgs e)
+        protected void OnAsyncCompleted(object sender, SocketAsyncEventArgs e)
         {
             // Determine which type of operation just completed and call the associated handler
             switch (e.LastOperation)
@@ -625,7 +574,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <summary>
         ///     This method is invoked when an asynchronous receive operation completes
         /// </summary>
-        private bool ProcessReceive(SocketAsyncEventArgs e)
+        protected bool ProcessReceive(SocketAsyncEventArgs e)
         {
             if (!IsConnected)
             {
@@ -676,7 +625,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <summary>
         ///     This method is invoked when an asynchronous send operation completes
         /// </summary>
-        private bool ProcessSend(SocketAsyncEventArgs e)
+        protected bool ProcessSend(SocketAsyncEventArgs e)
         {
             if (!IsConnected)
             {
@@ -741,48 +690,48 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <returns>'true' if the current HTTP response was successfully sent, 'false' if the session is not connected</returns>
         public bool SendResponseAsync(Response response)
         {
-            return SendAsync(response.Cache.Data, response.Cache.Offset, response.Cache.Size);
+            return SendDataAsync(response.Cache.Data, response.Cache.Offset, response.Cache.Size);
         }
 
         #endregion
 
         #region WebSocket send text methods
 
-        public long SendText(byte[] buffer, long offset, long size)
+        public long Send(byte[] buffer, long offset, long size)
         {
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_TEXT, false, buffer, offset, size);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
-        public long SendText(string text)
+        public long Send(string text)
         {
             lock (WebSocket.WsSendLock)
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_TEXT, false, data, 0, data.Length);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
-        public bool SendTextAsync(byte[] buffer, long offset, long size)
+        public bool SendAsync(byte[] buffer, long offset, long size)
         {
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_TEXT, false, buffer, offset, size);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
-        public bool SendTextAsync(string text)
+        public bool SendAsync(string text)
         {
             lock (WebSocket.WsSendLock)
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_TEXT, false, data, 0, data.Length);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -795,7 +744,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_BINARY, false, buffer, offset, size);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -805,7 +754,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_BINARY, false, data, 0, data.Length);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -814,7 +763,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_BINARY, false, buffer, offset, size);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -824,7 +773,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_BINARY, false, data, 0, data.Length);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -837,7 +786,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_CLOSE, false, buffer, offset, size, status);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -847,7 +796,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_CLOSE, false, data, 0, data.Length, status);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -856,7 +805,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_CLOSE, false, buffer, offset, size, status);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -866,7 +815,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_CLOSE, false, data, 0, data.Length, status);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -879,7 +828,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PING, false, buffer, offset, size);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -889,7 +838,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PING, false, data, 0, data.Length);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -898,7 +847,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PING, false, buffer, offset, size);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -908,7 +857,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PING, true, data, 0, data.Length);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -921,7 +870,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PONG, false, buffer, offset, size);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -931,7 +880,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PONG, false, data, 0, data.Length);
-                return Send(WebSocket.WsSendBuffer.ToArray());
+                return SendData(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -940,7 +889,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             lock (WebSocket.WsSendLock)
             {
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PONG, false, buffer, offset, size);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -950,7 +899,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var data = Encoding.UTF8.GetBytes(text);
                 WebSocket.PrepareSendFrame(WebSocket.WS_FIN | WebSocket.WS_PONG, false, data, 0, data.Length);
-                return SendAsync(WebSocket.WsSendBuffer.ToArray());
+                return SendDataAsync(WebSocket.WsSendBuffer.ToArray());
             }
         }
 
@@ -958,7 +907,7 @@ namespace Adeotek.MicroWebServer.WebSocket
 
         #region WebSocket receive methods
 
-        public string ReceiveText()
+        public string Receive()
         {
             var result = new Buffer();
 
@@ -974,7 +923,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var required = WebSocket.RequiredReceiveFrameSize();
                 cache.Resize(required);
-                var received = (int)Receive(cache.Data, 0, required);
+                var received = (int)ReceiveData(cache.Data, 0, required);
                 if (received != required)
                 {
                     return result.ExtractString(0, result.Data.Length);
@@ -1006,7 +955,7 @@ namespace Adeotek.MicroWebServer.WebSocket
             {
                 var required = WebSocket.RequiredReceiveFrameSize();
                 cache.Resize(required);
-                var received = (int)Receive(cache.Data, 0, required);
+                var received = (int)ReceiveData(cache.Data, 0, required);
                 if (received != required)
                 {
                     return result;
@@ -1026,7 +975,7 @@ namespace Adeotek.MicroWebServer.WebSocket
 
         #region Session handlers/events
 
-        private void OnReceivedRequestInternal(Request request)
+        protected void OnReceivedRequestInternal(Request request)
         {
             // Process the request
             OnReceivedRequest(request);
@@ -1307,12 +1256,12 @@ namespace Adeotek.MicroWebServer.WebSocket
         /// <summary>
         ///     Disposed flag
         /// </summary>
-        public bool IsDisposed { get; private set; }
+        public bool IsDisposed { get; protected set; }
 
         /// <summary>
         ///     Session socket disposed flag
         /// </summary>
-        public bool IsSocketDisposed { get; private set; } = true;
+        public bool IsSocketDisposed { get; protected set; } = true;
 
         // Implement IDisposable.
         public void Dispose()

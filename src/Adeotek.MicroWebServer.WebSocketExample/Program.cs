@@ -52,8 +52,8 @@ namespace Adeotek.MicroWebServer.WebSocketExample
 
         static void ProcessWebRequest(WsSession session, string message)
         {
-            _logger.LogInformation("Message received: {msg}", message);
-            session.SendTextAsync(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            _logger.LogInformation("Message received from [{id}]: {msg}", session.Id, message);
+            session.SendAsync(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
         }
     }
 }
