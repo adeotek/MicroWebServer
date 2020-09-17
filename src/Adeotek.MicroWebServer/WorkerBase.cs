@@ -176,7 +176,7 @@ namespace Adeotek.MicroWebServer
 
         protected void OnStart()
         {
-            _logger?.LogInformation("Starting {type} loop...", GetType().Name);
+            _logger?.LogDebug("Starting {type} loop...", GetType().Name);
             _running = true;
             _starting = false;
             OnWorkerStarted?.Invoke(this, new WorkerStateEventArgs(_workerId, true));
@@ -184,7 +184,7 @@ namespace Adeotek.MicroWebServer
 
         protected void OnStop()
         {
-            _logger?.LogInformation("Stopping {type} loop...", GetType().Name);
+            _logger?.LogDebug("Stopping {type} loop...", GetType().Name);
             _running = false;
             var e = new WorkerStateEventArgs(_workerId, false, _restart, _dispose);
             OnWorkerStopped?.Invoke(this, e);
