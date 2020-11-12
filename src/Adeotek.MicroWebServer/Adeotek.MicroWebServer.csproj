@@ -21,7 +21,7 @@
     <RepositoryType>Git</RepositoryType>
     <PackageIcon>PackageIcon.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageVersion>1.0.0</PackageVersion>
+    <PackageVersion>1.0.0-alpha.5</PackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
