@@ -45,7 +45,7 @@ namespace Adeotek.MicroWebServer.WorkerExample
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Exception caught starting worker loop [workerId:{_workerId}]");
-                Stop(false, true);
+                Stop();
             }
         }
 
@@ -60,9 +60,9 @@ namespace Adeotek.MicroWebServer.WorkerExample
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Exception caught stopping worker loop [workerId:{_workerId}]");
-                Stop(false, true);
+                Stop();
             }
-            
+
         }
 
         private string ProcessWebRequest(HttpListenerRequest request)

@@ -111,7 +111,7 @@ namespace Adeotek.MicroWebServer
                 {
                     try
                     {
-                        _logger.LogInformation("Web server is listening on: {routes}", string.Join("\n\t", _listener.Prefixes.ToArray<string>()));
+                        _logger.LogInformation("Web server is listening on: {routes}", string.Join("\n\t", _listener.Prefixes.ToArray()));
                     }
                     catch
                     {
@@ -119,14 +119,14 @@ namespace Adeotek.MicroWebServer
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 IsRunning = false;
                 if (_listener.IsListening)
                 {
                     _listener.Stop();
                 }
-                throw ex;
+                throw;
             }
             ThreadPool.QueueUserWorkItem((o) =>
             {
@@ -196,7 +196,7 @@ namespace Adeotek.MicroWebServer
             {
                 return;
             }
-            
+
             if (!string.IsNullOrWhiteSpace(AllowedOrigin))
             {
                 context.Response.Headers.Add("Access-Control-Allow-Origin: " + AllowedOrigin);

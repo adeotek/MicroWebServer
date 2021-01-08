@@ -42,7 +42,6 @@ namespace Adeotek.MicroWebServer
         protected int _workerId;
         protected bool _stop;
         protected bool _restart;
-        protected bool _dispose;
         protected bool _running;
         protected bool _starting;
 
@@ -68,7 +67,7 @@ namespace Adeotek.MicroWebServer
         /// <summary>
         /// Remaining interval in seconds until next task execution
         /// </summary>
-        public double IntervalUntilNextRun { get; protected set; } = 0;
+        public double IntervalUntilNextRun { get; protected set; }
 
         /// <summary>
         /// Gets the Worker state
@@ -92,10 +91,9 @@ namespace Adeotek.MicroWebServer
             return true;
         }
 
-        public bool Stop(bool restart = false, bool dispose = false)
+        public bool Stop(bool restart = false)
         {
             _restart = restart;
-            _dispose = dispose;
 
             if (_thread == null)
             {
@@ -103,13 +101,12 @@ namespace Adeotek.MicroWebServer
                 return true;
             }
 
-            if (_thread != null && (IsWorking || _thread.ThreadState == (ThreadState.Background | ThreadState.Running) || _thread.ThreadState == ThreadState.Background))
+            if (_running && _thread.IsAlive)
             {
                 EndWorkerLoop();
                 return false;
             }
 
-            _thread = null;
             OnStop();
             return true;
         }
@@ -134,6 +131,7 @@ namespace Adeotek.MicroWebServer
 
         protected virtual void EndWorkerLoop()
         {
+            _logger?.LogDebug("EndWorkerLoop triggered...");
             _stop = true;
         }
 
@@ -184,11 +182,13 @@ namespace Adeotek.MicroWebServer
 
         protected void OnStop()
         {
-            _logger?.LogDebug("Stopping {type} loop...", GetType().Name);
+            _logger?.LogDebug("{type} loop stopped...", GetType().Name);
             _running = false;
-            var e = new WorkerStateEventArgs(_workerId, false, _restart, _dispose);
+            _starting = false;
+            _thread = null;
+            var e = new WorkerStateEventArgs(_workerId, false, _restart, true);
             OnWorkerStopped?.Invoke(this, e);
-            _dispose = _stop = _restart = false;
+            _stop = _restart = false;
             if (e.Restart)
             {
                 Start();

@@ -58,7 +58,12 @@ namespace Adeotek.MicroWebServer
 
         public bool Stop()
         {
-            return _server?.Stop() ?? false;
+            if (!(_server?.IsStarted ?? false))
+            {
+                return false;
+            }
+
+            return _server.Stop();
         }
 
         public bool Restart()

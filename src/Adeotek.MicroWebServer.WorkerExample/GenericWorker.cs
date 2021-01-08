@@ -35,6 +35,8 @@ namespace Adeotek.MicroWebServer.WorkerExample
             }
 
             _logger.LogDebug("{type} [workerId:{id}] - ExecuteJob finished...", GetType().Name, _workerId);
+
+            // _logger.LogInformation($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Working and finalizing the job!");
             return true;
         }
     }

@@ -29,7 +29,7 @@ namespace Adeotek.MicroWebServer.WorkerExample
             {
                 _logger.LogInformation("Job done with result: ", e.Result.ToString());
             };
-            worker.Start();
+            // worker.Start();
 
 
             //// MicroHttpServer Worker example
@@ -37,22 +37,31 @@ namespace Adeotek.MicroWebServer.WorkerExample
             //worker.Start();
 
 
-            //// WebSocketServer Worker example
-            //var worker = new WebSocketServerWorker(_logger, 3);
-            //worker.Start();
+            // // WebSocketServer Worker example
+            // var worker = new WebSocketServerWorker(_logger, 3);
+            // worker.Start();
 
 
-            _logger.LogInformation($"Worker [{worker.GetType().Name}] started. \nCTRL+S to stop the Worker and exit.");
-            while (worker.IsRunning)
+            _logger.LogInformation($"Worker [{worker.GetType().Name}] started. \nCTRL+X to stop the Worker and exit.");
+            while (true)
             {
                 cki = Console.ReadKey(true);
-                if (cki.Key != ConsoleKey.S)
+                if (cki.Key == ConsoleKey.S)
                 {
-                    continue;
+                    _logger.LogInformation("Initiating Worker.Start()...");
+                    worker.Start();
                 }
-                _logger.LogInformation("Initiating Worker.Stop()...");
-                worker.Stop(false,true);
-                break;
+                if (cki.Key == ConsoleKey.T)
+                {
+                    _logger.LogInformation("Initiating Worker.Stop()...");
+                    worker.Stop();
+                }
+                if (cki.Key == ConsoleKey.X)
+                {
+                    _logger.LogInformation("Initiating Worker.Start() and closing program...");
+                    worker.Stop();
+                    break;
+                }
             }
         }
     }

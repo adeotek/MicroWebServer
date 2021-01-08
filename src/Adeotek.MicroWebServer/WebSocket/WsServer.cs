@@ -34,7 +34,7 @@ namespace Adeotek.MicroWebServer.WebSocket
         public event ServerStartedDelegate OnServerStarted;
         public event ServerStoppedDelegate OnServerStopped;
         public event ServerSocketErrorDelegate OnServerError;
-        
+
         public event WsSession.SessionErrorDelegate OnSessionError;
         public event WsSession.RawMessageReceivedDelegate OnMessageReceived;
         public event WsSession.MessageSentDelegate OnMessageSent;
