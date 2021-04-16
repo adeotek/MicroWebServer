@@ -31,7 +31,6 @@ namespace Adeotek.MicroWebServer
             WorkerId = workerId;
             Executed = executed;
             Result = result;
-
         }
     }
 
@@ -42,9 +41,10 @@ namespace Adeotek.MicroWebServer
         protected int _workerId;
         protected bool _stop;
         protected bool _restart;
-        protected bool _dispose;
         protected bool _running;
         protected bool _starting;
+        protected bool _nowait;
+        protected bool _isContinuous;
 
         public delegate void WorkerStartedDelegate(object sender, WorkerStateEventArgs e);
         public delegate void WorkerStoppedDelegate(object sender, WorkerStateEventArgs e);
@@ -68,7 +68,7 @@ namespace Adeotek.MicroWebServer
         /// <summary>
         /// Remaining interval in seconds until next task execution
         /// </summary>
-        public double IntervalUntilNextRun { get; protected set; } = 0;
+        public double IntervalUntilNextRun { get; protected set; }
 
         /// <summary>
         /// Gets the Worker state
@@ -92,10 +92,9 @@ namespace Adeotek.MicroWebServer
             return true;
         }
 
-        public bool Stop(bool restart = false, bool dispose = false)
+        public bool Stop(bool restart = false)
         {
             _restart = restart;
-            _dispose = dispose;
 
             if (_thread == null)
             {
@@ -103,13 +102,12 @@ namespace Adeotek.MicroWebServer
                 return true;
             }
 
-            if (_thread != null && (IsWorking || _thread.ThreadState == (ThreadState.Background | ThreadState.Running) || _thread.ThreadState == ThreadState.Background))
+            if (_running && IsWorking && (_isContinuous || _thread.IsAlive))
             {
                 EndWorkerLoop();
                 return false;
             }
 
-            _thread = null;
             OnStop();
             return true;
         }
@@ -134,6 +132,7 @@ namespace Adeotek.MicroWebServer
 
         protected virtual void EndWorkerLoop()
         {
+            _logger?.LogDebug("EndWorkerLoop triggered...");
             _stop = true;
         }
 
@@ -147,6 +146,8 @@ namespace Adeotek.MicroWebServer
                     IntervalUntilNextRun -= (double) LoopInterval / 1000;
                     continue;
                 }
+
+                _nowait = false;
                 IsWorking = true;
                 try
                 {
@@ -167,7 +168,7 @@ namespace Adeotek.MicroWebServer
                 {
                     IsWorking = false;
                 }
-                if (!_stop)
+                if (!_stop && !_nowait)
                 {
                     IntervalUntilNextRun = RunInterval > 0 ? RunInterval : -1;
                 }
@@ -176,7 +177,7 @@ namespace Adeotek.MicroWebServer
 
         protected void OnStart()
         {
-            _logger?.LogInformation("Starting {type} loop...", GetType().Name);
+            _logger?.LogDebug("Starting {type} loop...", GetType().Name);
             _running = true;
             _starting = false;
             OnWorkerStarted?.Invoke(this, new WorkerStateEventArgs(_workerId, true));
@@ -184,11 +185,13 @@ namespace Adeotek.MicroWebServer
 
         protected void OnStop()
         {
-            _logger?.LogInformation("Stopping {type} loop...", GetType().Name);
+            _logger?.LogDebug("{type} loop stopped...", GetType().Name);
             _running = false;
-            var e = new WorkerStateEventArgs(_workerId, false, _restart, _dispose);
+            _starting = false;
+            _thread = null;
+            var e = new WorkerStateEventArgs(_workerId, false, _restart, true);
             OnWorkerStopped?.Invoke(this, e);
-            _dispose = _stop = _restart = false;
+            _stop = _restart = false;
             if (e.Restart)
             {
                 Start();

@@ -2,49 +2,45 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <OutputType>Library</OutputType>
     <AssemblyName>Adeotek.MicroWebServer</AssemblyName>
     <PackageId>Adeotek.MicroWebServer</PackageId>
     <PackageTags>http,webserver,embedded,micro,websocket,server</PackageTags>
-    <title>Adeotek.MicroWebServer</title>
+    <Title>Adeotek.MicroWebServer</Title>
     <Description>A .Net Core embeddable micro web server</Description>
-    <PackageProjectUrl>https://github.com/adeotek/DotNet.MicroWebServer</PackageProjectUrl>
-    <PackageLicense>https://github.com/adeotek/DotNet.MicroWebServer/blob/master/LICENSE</PackageLicense>
+    <Product>NETopes MicroWebServer</Product>
+    <Company>AdeoTEK Software SRL</Company>
     <Authors>George Benjamin-Schonberger</Authors>
-    <Company>George Benjamin-Schonberger</Company>
-    <Copyright>George Benjamin-Schonberger 2020</Copyright>
-    <AssemblyVersion>1.0.0.4</AssemblyVersion>
-    <FileVersion>1.0.0.4</FileVersion>
-    <PackageIcon>logo_128_128.png</PackageIcon>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <OutputType>Library</OutputType>
+    <Copyright>Copyright © AdeoTEK Software SRL 2021</Copyright>
+    <AssemblyVersion>1.0.0.7</AssemblyVersion>
+    <FileVersion>1.0.0.7</FileVersion>
+    <Version>1.0.0</Version>
+    <PackageProjectUrl>https://github.com/adeotek/DotNet.MicroWebServer/</PackageProjectUrl>
+    <PackageLicense>https://github.com/adeotek/DotNet.MicroWebServer/blob/master/README.md</PackageLicense>
+    <RepositoryUrl>https://github.com/adeotek/DotNet.MicroWebServer/</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <PackageIcon>PackageIcon.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <MinVerVerbosity>diagnostic</MinVerVerbosity>
-    <MinVerTagPrefix>v</MinVerTagPrefix>
-    <MinVerSkip Condition="'$(Configuration)' == 'Debug'">true</MinVerSkip>
-    <LangVersion>latest</LangVersion>
+    <PackageVersion>1.0.0</PackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="../../assets/logo_128_128.png" Pack="true" PackagePath="/" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
-    <PackageReference Include="MinVer" Version="2.2.0">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\LICENSE">
+    <None Include="../../LICENSE">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>/</PackagePath>
+    </None>
+    <None Include="../../assets/PackageIcon.png">
+      <Pack>True</Pack>
+      <PackagePath>/</PackagePath>
     </None>
   </ItemGroup>
 

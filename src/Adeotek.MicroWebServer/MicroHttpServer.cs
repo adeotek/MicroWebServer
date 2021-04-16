@@ -15,6 +15,7 @@ namespace Adeotek.MicroWebServer
         Json = 2,
         Jsonp = 3
     }
+
     public class MicroHttpServer : IDisposable
     {
         private ILogger _logger;
@@ -23,7 +24,7 @@ namespace Adeotek.MicroWebServer
 
         public ResponseTypes ResponseType { get; set; }
         public bool UTF8 { get; set; }
-        public ICollection<string> CrossDomains { get; set; }
+        public string AllowedOrigin { get; set; }
         public bool SendChunked { get; set; }
         public bool IsRunning { get; private set; }
 
@@ -34,7 +35,7 @@ namespace Adeotek.MicroWebServer
             int port = 80,
             ResponseTypes responseType = ResponseTypes.Text,
             bool utf8 = true,
-            ICollection<string> crossDomains = null,
+            string allowedOrigin = null,
             bool sendChunked = false,
             IReadOnlyCollection<string> fullRoutes = null,
             ILogger logger = null
@@ -86,12 +87,16 @@ namespace Adeotek.MicroWebServer
             _listener = new HttpListener();
             foreach (var s in prefixes.Where(s => !string.IsNullOrEmpty(s)))
             {
+                if (!s.EndsWith('/'))
+                {
+                    throw new ArgumentException($"Prefix [{s}] is not ending with `/`.");
+                }
                 _listener.Prefixes.Add(s);
             }
             _responderMethod = requestResponderMethod ?? throw new ArgumentException("Invalid request responder method.");
             ResponseType = responseType;
             UTF8 = utf8;
-            CrossDomains = crossDomains;
+            AllowedOrigin = allowedOrigin;
             SendChunked = sendChunked;
         }
 
@@ -106,7 +111,7 @@ namespace Adeotek.MicroWebServer
                 {
                     try
                     {
-                        _logger.LogInformation("Web server is listening on: {routes}", string.Join("\n\t", _listener.Prefixes.ToArray<string>()));
+                        _logger.LogInformation("Web server is listening on: {routes}", string.Join("\n\t", _listener.Prefixes.ToArray()));
                     }
                     catch
                     {
@@ -114,14 +119,14 @@ namespace Adeotek.MicroWebServer
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 IsRunning = false;
                 if (_listener.IsListening)
                 {
                     _listener.Stop();
                 }
-                throw ex;
+                throw;
             }
             ThreadPool.QueueUserWorkItem((o) =>
             {
@@ -191,20 +196,18 @@ namespace Adeotek.MicroWebServer
             {
                 return;
             }
+
+            if (!string.IsNullOrWhiteSpace(AllowedOrigin))
+            {
+                context.Response.Headers.Add("Access-Control-Allow-Origin: " + AllowedOrigin);
+            }
+
             var charset = string.Empty;
             if (UTF8)
             {
                 charset = "; charset=utf-8";
                 context.Response.ContentEncoding = Encoding.UTF8;
             }
-            else if (CrossDomains != null && CrossDomains.Count > 0)
-            {
-                foreach (var d in CrossDomains.Where(d => !string.IsNullOrEmpty(d)))
-                {
-                    context.Response.Headers.Add("Access-Control-Allow-Origin: " + d + ";");
-                }
-            }
-
             context.Response.ContentType = ResponseType switch
             {
                 ResponseTypes.Text => "text/plain" + charset,

@@ -30,7 +30,7 @@ namespace Adeotek.MicroWebServer.Example
                 port: 8080,
                 responseType: ResponseTypes.Text,
                 utf8: true,
-                crossDomains: new List<string>() { "*" },
+                allowedOrigin: "*",
                 logger: _logger
                 );
             microWebServer.Start();

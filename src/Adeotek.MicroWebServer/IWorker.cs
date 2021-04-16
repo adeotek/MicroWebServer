@@ -7,7 +7,7 @@ namespace Adeotek.MicroWebServer
         bool IsRunning { get; }
         bool IsWorking { get; }
         bool Start();
-        bool Stop(bool restart = false, bool dispose = false);
+        bool Stop(bool restart = false);
         bool Restart();
     }
 }
