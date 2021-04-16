@@ -31,7 +31,6 @@ namespace Adeotek.MicroWebServer
             WorkerId = workerId;
             Executed = executed;
             Result = result;
-
         }
     }
 
@@ -44,6 +43,8 @@ namespace Adeotek.MicroWebServer
         protected bool _restart;
         protected bool _running;
         protected bool _starting;
+        protected bool _nowait;
+        protected bool _isContinuous;
 
         public delegate void WorkerStartedDelegate(object sender, WorkerStateEventArgs e);
         public delegate void WorkerStoppedDelegate(object sender, WorkerStateEventArgs e);
@@ -101,7 +102,7 @@ namespace Adeotek.MicroWebServer
                 return true;
             }
 
-            if (_running && _thread.IsAlive)
+            if (_running && IsWorking && (_isContinuous || _thread.IsAlive))
             {
                 EndWorkerLoop();
                 return false;
@@ -145,6 +146,8 @@ namespace Adeotek.MicroWebServer
                     IntervalUntilNextRun -= (double) LoopInterval / 1000;
                     continue;
                 }
+
+                _nowait = false;
                 IsWorking = true;
                 try
                 {
@@ -165,7 +168,7 @@ namespace Adeotek.MicroWebServer
                 {
                     IsWorking = false;
                 }
-                if (!_stop)
+                if (!_stop && !_nowait)
                 {
                     IntervalUntilNextRun = RunInterval > 0 ? RunInterval : -1;
                 }
