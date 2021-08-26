@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer", "src\Adeotek.MicroWebServer\Adeotek.MicroWebServer.csproj", "{B32E9480-2740-4767-8A54-3DA3633B575E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer", "src\MicroWebServer\Adeotek.MicroWebServer.csproj", "{B32E9480-2740-4767-8A54-3DA3633B575E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer.Example", "src\Adeotek.MicroWebServer.Example\Adeotek.MicroWebServer.Example.csproj", "{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.EmbeddedWebServer", "src\EmbeddedWebServer\Adeotek.EmbeddedWebServer.csproj", "{9120EDC6-F529-4D21-BD12-67C9106CBA71}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer.WorkerExample", "src\Adeotek.MicroWebServer.WorkerExample\Adeotek.MicroWebServer.WorkerExample.csproj", "{0AA4FEC0-15A9-48E3-AF1E-417B9D6D855B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer.Example", "examples\MicroWebServer.Example\Adeotek.MicroWebServer.Example.csproj", "{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.MicroWebServer.WebSocketExample", "src\Adeotek.MicroWebServer.WebSocketExample\Adeotek.MicroWebServer.WebSocketExample.csproj", "{42F947BF-DA70-4D2B-9047-FA85CC8665F1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer.WorkerExample", "examples\MicroWebServer.WorkerExample\Adeotek.MicroWebServer.WorkerExample.csproj", "{0AA4FEC0-15A9-48E3-AF1E-417B9D6D855B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.MicroWebServer.WebSocketExample", "examples\MicroWebServer.WebSocketExample\Adeotek.MicroWebServer.WebSocketExample.csproj", "{42F947BF-DA70-4D2B-9047-FA85CC8665F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{42F947BF-DA70-4D2B-9047-FA85CC8665F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{42F947BF-DA70-4D2B-9047-FA85CC8665F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{42F947BF-DA70-4D2B-9047-FA85CC8665F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9120EDC6-F529-4D21-BD12-67C9106CBA71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9120EDC6-F529-4D21-BD12-67C9106CBA71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9120EDC6-F529-4D21-BD12-67C9106CBA71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9120EDC6-F529-4D21-BD12-67C9106CBA71}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

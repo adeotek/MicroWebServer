@@ -15,9 +15,9 @@
     <AssemblyVersion>1.0.0.7</AssemblyVersion>
     <FileVersion>1.0.0.7</FileVersion>
     <Version>1.0.0</Version>
-    <PackageProjectUrl>https://github.com/adeotek/DotNet.MicroWebServer/</PackageProjectUrl>
-    <PackageLicense>https://github.com/adeotek/DotNet.MicroWebServer/blob/master/README.md</PackageLicense>
-    <RepositoryUrl>https://github.com/adeotek/DotNet.MicroWebServer/</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/adeotek/YANCS/</PackageProjectUrl>
+    <PackageLicense>https://github.com/adeotek/YANCS/blob/master/README.md</PackageLicense>
+    <RepositoryUrl>https://github.com/adeotek/YANCS/</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <PackageIcon>PackageIcon.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
