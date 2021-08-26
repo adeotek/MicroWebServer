@@ -8,7 +8,7 @@
     <PackageTags>http,webserver,embedded,micro,websocket,server</PackageTags>
     <Title>Adeotek.MicroWebServer</Title>
     <Description>A .Net Core embeddable micro web server</Description>
-    <Product>NETopes MicroWebServer</Product>
+    <Product>AdeoTEK MicroWebServer</Product>
     <Company>AdeoTEK Software SRL</Company>
     <Authors>George Benjamin-Schonberger</Authors>
     <Copyright>Copyright © AdeoTEK Software SRL 2021</Copyright>
