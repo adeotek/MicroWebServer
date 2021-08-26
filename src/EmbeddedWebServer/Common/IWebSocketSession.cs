@@ -60,5 +60,18 @@ namespace Adeotek.EmbeddedWebServer.Common
         event SessionDisconnectedDelegate OnSessionDisconnected;
         event RawMessageReceivedDelegate OnMessageReceived;
         event SessionErrorDelegate OnSessionError;
+
+        long Send(byte[] buffer, long offset, long size);
+        long Send(string text);
+        bool SendAsync(byte[] buffer, long offset, long size);
+        bool SendAsync(string text);
+        long SendBinary(byte[] buffer, long offset, long size);
+        long SendBinary(string text);
+        bool SendBinaryAsync(byte[] buffer, long offset, long size);
+        bool SendBinaryAsync(string text);
+        long SendClose(int status, byte[] buffer, long offset, long size);
+        long SendClose(int status, string text);
+        bool SendCloseAsync(int status, byte[] buffer, long offset, long size);
+        bool SendCloseAsync(int status, string text);
     }
 }

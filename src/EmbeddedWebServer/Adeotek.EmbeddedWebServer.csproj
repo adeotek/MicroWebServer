@@ -4,10 +4,8 @@
     <TargetFramework>net5.0</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>Adeotek.EmbeddedWebServer</AssemblyName>
-    <PackageId>Adeotek.EmbeddedWebServer</PackageId>
-    <PackageTags>http,webserver,embedded,micro,websocket,server</PackageTags>
     <Title>Adeotek.EmbeddedWebServer</Title>
-    <Description>A .Net Core embeddable micro web server</Description>
+    <Description>A .Net Core embeddable web and websocket server</Description>
     <Product>AdeoTEK EmbeddedWebServer</Product>
     <Company>AdeoTEK Software SRL</Company>
     <Authors>George Benjamin-Schonberger</Authors>
@@ -15,13 +13,15 @@
     <AssemblyVersion>1.0.0.1</AssemblyVersion>
     <FileVersion>1.0.0.1</FileVersion>
     <Version>1.0.0</Version>
+    <PackageId>Adeotek.EmbeddedWebServer</PackageId>
+    <PackageTags>http,https,webserver,embedded,micro,websocket,server,ws,wss</PackageTags>
     <PackageProjectUrl>https://github.com/adeotek/YANCS/</PackageProjectUrl>
     <PackageLicense>https://github.com/adeotek/YANCS/blob/master/README.md</PackageLicense>
-    <RepositoryUrl>https://github.com/adeotek/YANCS/</RepositoryUrl>
-    <RepositoryType>Git</RepositoryType>
     <PackageIcon>PackageIcon.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageVersion>1.0.0</PackageVersion>
+    <RepositoryUrl>https://github.com/adeotek/YANCS/</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +30,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <PackageReference Include="NetCoreServer" Version="5.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Worker\Adeotek.Worker.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -7,11 +7,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.EmbeddedWebServer", "src\EmbeddedWebServer\Adeotek.EmbeddedWebServer.csproj", "{9120EDC6-F529-4D21-BD12-67C9106CBA71}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer.Example", "examples\MicroWebServer.Example\Adeotek.MicroWebServer.Example.csproj", "{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.Worker", "src\Worker\Adeotek.Worker.csproj", "{5F44E6E5-4EBA-4250-9B0E-8D2D243293BA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer.WebServerExample", "examples\MicroWebServer.WebServerExample\Adeotek.MicroWebServer.WebServerExample.csproj", "{C9A27B7A-8342-4AA5-94FC-E13AC33B5B05}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Adeotek.MicroWebServer.WorkerExample", "examples\MicroWebServer.WorkerExample\Adeotek.MicroWebServer.WorkerExample.csproj", "{0AA4FEC0-15A9-48E3-AF1E-417B9D6D855B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.MicroWebServer.WebSocketExample", "examples\MicroWebServer.WebSocketExample\Adeotek.MicroWebServer.WebSocketExample.csproj", "{42F947BF-DA70-4D2B-9047-FA85CC8665F1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.EmbeddedWebServer.WebSocketExample", "examples\EmbeddedWebServer.WebSocketExample\Adeotek.EmbeddedWebServer.WebSocketExample.csproj", "{6B482D3D-92E3-40EB-AED7-E4F8190E2FA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adeotek.EmbeddedWebServer.WebServerExample", "examples\EmbeddedWebServer.WebServerExample\Adeotek.EmbeddedWebServer.WebServerExample.csproj", "{43F43C49-A41B-4F3E-A74F-D3FD3A0D6394}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +45,18 @@ Global
 		{9120EDC6-F529-4D21-BD12-67C9106CBA71}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9120EDC6-F529-4D21-BD12-67C9106CBA71}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9120EDC6-F529-4D21-BD12-67C9106CBA71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F44E6E5-4EBA-4250-9B0E-8D2D243293BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F44E6E5-4EBA-4250-9B0E-8D2D243293BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F44E6E5-4EBA-4250-9B0E-8D2D243293BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F44E6E5-4EBA-4250-9B0E-8D2D243293BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B482D3D-92E3-40EB-AED7-E4F8190E2FA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B482D3D-92E3-40EB-AED7-E4F8190E2FA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B482D3D-92E3-40EB-AED7-E4F8190E2FA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B482D3D-92E3-40EB-AED7-E4F8190E2FA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43F43C49-A41B-4F3E-A74F-D3FD3A0D6394}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43F43C49-A41B-4F3E-A74F-D3FD3A0D6394}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43F43C49-A41B-4F3E-A74F-D3FD3A0D6394}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43F43C49-A41B-4F3E-A74F-D3FD3A0D6394}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

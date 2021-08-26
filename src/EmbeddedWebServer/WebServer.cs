@@ -23,7 +23,7 @@ namespace Adeotek.EmbeddedWebServer
         private Func<HttpListenerRequest, string> _responderMethod;
 
         public ResponseTypes ResponseType { get; set; }
-        public bool UTF8 { get; set; }
+        public bool Utf8 { get; set; }
         public string AllowedOrigin { get; set; }
         public bool SendChunked { get; set; }
         public bool IsRunning { get; private set; }
@@ -95,7 +95,7 @@ namespace Adeotek.EmbeddedWebServer
             }
             _responderMethod = requestResponderMethod ?? throw new ArgumentException("Invalid request responder method.");
             ResponseType = responseType;
-            UTF8 = utf8;
+            Utf8 = utf8;
             AllowedOrigin = allowedOrigin;
             SendChunked = sendChunked;
         }
@@ -203,7 +203,7 @@ namespace Adeotek.EmbeddedWebServer
             }
 
             var charset = string.Empty;
-            if (UTF8)
+            if (Utf8)
             {
                 charset = "; charset=utf-8";
                 context.Response.ContentEncoding = Encoding.UTF8;

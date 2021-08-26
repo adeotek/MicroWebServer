@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using Microsoft.Extensions.Logging;
 
-namespace Adeotek.MicroWebServer.Example
+namespace Adeotek.MicroWebServer.WebServerExample
 {
     class Program
     {

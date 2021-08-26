@@ -4,24 +4,24 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>Adeotek.MicroWebServer</AssemblyName>
-    <PackageId>Adeotek.MicroWebServer</PackageId>
-    <PackageTags>http,webserver,embedded,micro,websocket,server</PackageTags>
     <Title>Adeotek.MicroWebServer</Title>
     <Description>A .Net Core embeddable micro web server</Description>
     <Product>AdeoTEK MicroWebServer</Product>
     <Company>AdeoTEK Software SRL</Company>
     <Authors>George Benjamin-Schonberger</Authors>
     <Copyright>Copyright © AdeoTEK Software SRL 2021</Copyright>
-    <AssemblyVersion>1.0.0.7</AssemblyVersion>
-    <FileVersion>1.0.0.7</FileVersion>
-    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.1.8</AssemblyVersion>
+    <FileVersion>1.0.1.8</FileVersion>
+    <Version>1.0.1</Version>
+    <PackageId>Adeotek.MicroWebServer</PackageId>
+    <PackageTags>http,webserver,embedded,micro,websocket,server</PackageTags>
     <PackageProjectUrl>https://github.com/adeotek/YANCS/</PackageProjectUrl>
     <PackageLicense>https://github.com/adeotek/YANCS/blob/master/README.md</PackageLicense>
-    <RepositoryUrl>https://github.com/adeotek/YANCS/</RepositoryUrl>
-    <RepositoryType>Git</RepositoryType>
     <PackageIcon>PackageIcon.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageVersion>1.0.0</PackageVersion>
+    <PackageVersion>1.0.1</PackageVersion>
+    <RepositoryUrl>https://github.com/adeotek/YANCS/</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,6 +31,10 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Worker\Adeotek.Worker.csproj" />
   </ItemGroup>
 
   <ItemGroup>

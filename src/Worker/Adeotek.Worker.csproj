@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>Adeotek.Worker</AssemblyName>
+    <Title>Adeotek.Worker</Title>
+    <Description>A .Net Core Worker base class</Description>
+    <Product>AdeoTEK Worker</Product>
+    <Company>AdeoTEK Software SRL</Company>
+    <Authors>George Benjamin-Schonberger</Authors>
+    <Copyright>Copyright © AdeoTEK Software SRL 2021</Copyright>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <FileVersion>1.0.0.1</FileVersion>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0"/>
+  </ItemGroup>
+
+</Project>

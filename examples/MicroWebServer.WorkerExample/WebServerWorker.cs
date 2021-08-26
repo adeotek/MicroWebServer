@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using Adeotek.Worker;
 using Microsoft.Extensions.Logging;
 
 namespace Adeotek.MicroWebServer.WorkerExample

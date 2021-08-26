@@ -2,7 +2,7 @@
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
-namespace Adeotek.MicroWebServer
+namespace Adeotek.Worker
 {
     public class WorkerStateEventArgs : EventArgs
     {

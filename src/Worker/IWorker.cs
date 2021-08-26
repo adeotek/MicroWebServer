@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Adeotek.MicroWebServer
+namespace Adeotek.Worker
 {
     public interface IWorker : IDisposable
     {
