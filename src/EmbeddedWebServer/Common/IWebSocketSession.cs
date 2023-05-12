@@ -61,10 +61,10 @@ namespace Adeotek.EmbeddedWebServer.Common
         event RawMessageReceivedDelegate OnMessageReceived;
         event SessionErrorDelegate OnSessionError;
 
-        long Send(byte[] buffer, long offset, long size);
-        long Send(string text);
-        bool SendAsync(byte[] buffer, long offset, long size);
-        bool SendAsync(string text);
+        long SendText(byte[] buffer, long offset, long size);
+        long SendText(string text);
+        bool SendTextAsync(byte[] buffer, long offset, long size);
+        bool SendTextAsync(string text);
         long SendBinary(byte[] buffer, long offset, long size);
         long SendBinary(string text);
         bool SendBinaryAsync(byte[] buffer, long offset, long size);

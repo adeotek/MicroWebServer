@@ -14,15 +14,17 @@ namespace Adeotek.EmbeddedWebServer
     public class WebSocketServer : IDisposable
     {
         private readonly ILogger _logger;
-        private readonly IWebSocketServer _server;
         private readonly IPAddress _ipAddress;
         private readonly int _port;
         private readonly X509Certificate2 _certificate;
         private readonly Action<IWebSocketSession, string> _messageConsumer;
+        private IWebSocketServer _server;
 
         public event IWebSocketServer.ServerStartedDelegate OnServerStarted;
         public event IWebSocketServer.ServerStoppedDelegate OnServerStopped;
         public event IWebSocketServer.ServerSocketErrorDelegate OnServerError;
+        public event IWebSocketSession.SessionConnectedDelegate OnServerSessionConnected;
+        public event IWebSocketSession.SessionDisconnectedDelegate OnServerSessionDisconnected;
 
         public event IWebSocketSession.SessionConnectedDelegate OnSessionConnected;
         public event IWebSocketSession.SessionDisconnectedDelegate OnSessionDisconnected;
@@ -30,31 +32,58 @@ namespace Adeotek.EmbeddedWebServer
         public event IWebSocketSession.SessionErrorDelegate OnSessionError;
 
         public WebSocketServer(
-            string ipAddress = "127.0.0.1",
+            IPAddress ipAddress = null,
             int port = 8080,
             X509Certificate2 certificate = null,
             Action<IWebSocketSession, string> messageConsumerMethod = null,
             ILogger logger = null
             )
         {
+            _ipAddress = ipAddress ?? IPAddress.Any;
+            _port = port;
+            _certificate = certificate;
+            _messageConsumer = messageConsumerMethod;
+            _logger = logger;
+            InitializeServer();
+        }
+
+        public WebSocketServer(
+            string ipAddress = null,
+            int port = 8080,
+            X509Certificate2 certificate = null,
+            Action<IWebSocketSession, string> messageConsumerMethod = null,
+            ILogger logger = null
+        )
+        {
             _ipAddress = string.IsNullOrEmpty(ipAddress) ? IPAddress.Any : IPAddress.Parse(ipAddress);
             _port = port;
             _certificate = certificate;
             _messageConsumer = messageConsumerMethod;
             _logger = logger;
+            InitializeServer();
+        }
 
+        private void InitializeServer()
+        {
             if (_certificate == null)
             {
-                _server = new WsServer(_ipAddress, port);
+                _server = new WsServer(_ipAddress, _port);
             }
             else
             {
-                var context = new SslContext(SslProtocols.Tls12, _certificate);
-                _server = new WssServer(context, _ipAddress, port);
+                var context = new SslContext(SslProtocols.Tls12, _certificate)
+                {
+                    ClientCertificateRequired = false,
+                    CertificateValidationCallback = (sender, certificate, chain, errors) => true
+                };
+                _server = new WssServer(context, _ipAddress, _port);
+                _server.AddStaticContent("www", "/chat");
             }
             _server.OnServerStarted += OnWsServerStarted;
             _server.OnServerStopped += OnWsServerStopped;
             _server.OnServerError += OnWsServerError;
+            _server.OnServerSessionConnected += OnWsServerSessionConnected;
+            _server.OnServerSessionDisconnected += OnWsServerSessionDisconnected;
             _server.OnSessionConnected += OnWsSessionConnected;
             _server.OnSessionDisconnected += OnWsSessionDisconnected;
             _server.OnMessageReceived += OnWsMessageReceived;
@@ -86,7 +115,7 @@ namespace Adeotek.EmbeddedWebServer
 
         public bool Broadcast(string text)
         {
-            return _server?.Broadcast(text) ?? false;
+            return _server?.Multicast(text) ?? false;
         }
 
         private void OnWsServerStarted(object sender, ServerStateEventArgs e)
@@ -136,6 +165,30 @@ namespace Adeotek.EmbeddedWebServer
             }
             OnMessageReceived?.Invoke(sender, e);
             _messageConsumer?.Invoke((IWebSocketSession) sender, message);
+        }
+
+        private void OnWsServerSessionConnected(object sender, ConnectionStateEventArgs e)
+        {
+            if (OnServerSessionConnected == null)
+            {
+                _logger?.LogDebug("WebSocket server session [{Id}] connected!", e.SessionId.ToString());
+            }
+            else
+            {
+                OnServerSessionConnected?.Invoke(sender, e);
+            }
+        }
+
+        private void OnWsServerSessionDisconnected(object sender, ConnectionStateEventArgs e)
+        {
+            if (OnServerSessionDisconnected == null)
+            {
+                _logger?.LogDebug("WebSocket server session [{Id}] disconnected!", e.SessionId.ToString());
+            }
+            else
+            {
+                OnServerSessionDisconnected?.Invoke(sender, e);
+            }
         }
 
         private void OnWsSessionConnected(object sender, ConnectionStateEventArgs e)

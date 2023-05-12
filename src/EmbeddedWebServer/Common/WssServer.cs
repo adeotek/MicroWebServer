@@ -15,22 +15,26 @@ namespace Adeotek.EmbeddedWebServer.Common
         public event IWebSocketServer.ServerStartedDelegate OnServerStarted;
         public event IWebSocketServer.ServerStoppedDelegate OnServerStopped;
         public event IWebSocketServer.ServerSocketErrorDelegate OnServerError;
+        public event IWebSocketSession.SessionConnectedDelegate OnServerSessionConnected;
+        public event IWebSocketSession.SessionDisconnectedDelegate OnServerSessionDisconnected;
         public event IWebSocketSession.SessionConnectedDelegate OnSessionConnected;
         public event IWebSocketSession.SessionDisconnectedDelegate OnSessionDisconnected;
         public event IWebSocketSession.RawMessageReceivedDelegate OnMessageReceived;
         public event IWebSocketSession.SessionErrorDelegate OnSessionError;
 
-        public bool Broadcast(string text) => Multicast(text);
-
-        public bool Broadcast(byte[] buffer, long offset, long size) => Multicast(buffer, offset, size);
-
-        public bool BroadcastBinary(string text) => MulticastBinary(text);
-
-        public bool BroadcastBinary(byte[] buffer, long offset, long size) => MulticastBinary(buffer, offset, size);
-
         protected override SslSession CreateSession()
         {
             var newSession = new WssSession(this);
+
+            if (OnSessionConnected != null)
+            {
+                newSession.OnSessionConnected += OnSessionConnected;
+            }
+
+            if (OnSessionDisconnected != null)
+            {
+                newSession.OnSessionDisconnected += OnSessionDisconnected;
+            }
 
             if (OnMessageReceived != null)
             {
@@ -57,12 +61,12 @@ namespace Adeotek.EmbeddedWebServer.Common
 
         protected override void OnConnected(SslSession session)
         {
-            OnSessionConnected?.Invoke(session, new ConnectionStateEventArgs(session.Id, true));
+            OnServerSessionConnected?.Invoke(session, new ConnectionStateEventArgs(session.Id, true));
         }
 
         protected override void OnDisconnected(SslSession session)
         {
-            OnSessionDisconnected?.Invoke(session, new ConnectionStateEventArgs(session.Id, false));
+            OnServerSessionDisconnected?.Invoke(session, new ConnectionStateEventArgs(session.Id, false));
         }
 
         protected override void OnError(SocketError error)

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Tester</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+<!--    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>-->
+<!--    <script src="websocket.js"></script>-->
+</head>
+<body>
+    <div class="row mt-2 mb-2">
+        <div class="col-12">
+            <h2 class="p-4">WebSocket Tester</h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 p-4">
+            <label for="message">Message</label>
+            <textarea class="form-control" style="height: 100px;" id="message"></textarea>
+            <button class="btn btn-primary mt-3" id="btn-send-message">Send message</button>
+            <button class="btn btn-warning mt-3 float-right" id="btn-clear">Clear</button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 p-4">
+            <label>WebSocket state:</label>
+            <span class="ml-4 text-danger" id="socket-state">Offline</span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 p-4">
+            <label>Responses</label>
+            <div class="d-block p-4 text-black" id="ws-results"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        document.getElementById('btn-clear').addEventListener('click', function(e) {
+            document.getElementById('ws-results').innerHTML = '';
+        });
+
+        document.getElementById('btn-send-message').addEventListener('click', function(e) {
+            console.log('send message: '+document.getElementById('message').value);
+            sendMessage(document.getElementById('message').value);
+            document.getElementById('message').value='';
+        });
+
+        let onMessageReceived = function(wsResponse,wsHttpCode,wsErrors) {
+            console.log(wsHttpCode);
+            console.log(wsResponse);
+            console.log(wsErrors);
+            let newElement = document.createElement('div');
+            newElement.classList.add('d-block');
+            newElement.innerText=`[${wsHttpCode}] ${wsResponse}`;
+            if (wsErrors != null) {
+                newElement.classList.add('text-danger');
+                newElement.innerText+=' >> '+JSON.stringify(wsErrors);
+            }
+            document.getElementById('ws-results').appendChild(newElement);
+        };
+
+        // const apiUrl='wss://winhost:8080/';
+        const apiUrl='wss://localhost:8080/';
+        // const apiUrl='wss://localhost:8443/';
+        // const apiUrl='ws://127.0.0.1:9698/';
+        let webSocket = new WebSocket(apiUrl);
+        webSocket.onopen = function() {
+            console.log('[open] Connection established');
+            document.getElementById('socket-state').innerText = 'Online';
+            document.getElementById('socket-state').classList.add('text-success');
+            document.getElementById('socket-state').classList.remove('text-danger');
+        }
+        webSocket.onmessage = function(event) {
+            onMessageReceived(event.data,200,null);
+            console.log(`[message] Data received from server: ${event.data}`);
+        }
+        webSocket.onerror = function(error) {
+            onMessageReceived(null,500,error);
+            reject(error);
+        }
+        webSocket.onclose = function(event) {
+            console.log('[open] Connection closed');
+            document.getElementById('socket-state').innerText = 'Offline';
+            document.getElementById('socket-state').classList.add('text-danger');
+            document.getElementById('socket-state').classList.remove('text-success');
+        }
+
+        function sendMessage(message) {
+            if(webSocket.readyState === WebSocket.OPEN) {
+                console.log('sending message...');
+                webSocket.send(message);
+            } else {
+                console.log('websocket is not opened!!!');
+            }
+        }
+
+    </script>
+</body>
+</html>

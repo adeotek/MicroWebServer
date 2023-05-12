@@ -67,5 +67,10 @@ namespace Adeotek.EmbeddedWebServer.Common
         {
             OnSessionError?.Invoke(this, new SocketErrorEventArgs(Id, SocketError.SocketError));
         }
+
+        protected override void OnError(SocketError error)
+        {
+            OnSessionError?.Invoke(this, new SocketErrorEventArgs(Id, SocketError.SocketError));
+        }
     }
 }

@@ -15,6 +15,8 @@ namespace Adeotek.EmbeddedWebServer.Common
         public event IWebSocketServer.ServerStartedDelegate OnServerStarted;
         public event IWebSocketServer.ServerStoppedDelegate OnServerStopped;
         public event IWebSocketServer.ServerSocketErrorDelegate OnServerError;
+        public event IWebSocketSession.SessionConnectedDelegate OnServerSessionConnected;
+        public event IWebSocketSession.SessionDisconnectedDelegate OnServerSessionDisconnected;
         public event IWebSocketSession.SessionConnectedDelegate OnSessionConnected;
         public event IWebSocketSession.SessionDisconnectedDelegate OnSessionDisconnected;
         public event IWebSocketSession.RawMessageReceivedDelegate OnMessageReceived;
@@ -31,6 +33,16 @@ namespace Adeotek.EmbeddedWebServer.Common
         protected override TcpSession CreateSession()
         {
             var newSession = new WsSession(this);
+
+            if (OnSessionConnected != null)
+            {
+                newSession.OnSessionConnected += OnSessionConnected;
+            }
+
+            if (OnSessionDisconnected != null)
+            {
+                newSession.OnSessionDisconnected += OnSessionDisconnected;
+            }
 
             if (OnMessageReceived != null)
             {
@@ -57,12 +69,12 @@ namespace Adeotek.EmbeddedWebServer.Common
 
         protected override void OnConnected(TcpSession session)
         {
-            OnSessionConnected?.Invoke(session, new ConnectionStateEventArgs(session.Id, true));
+            OnServerSessionConnected?.Invoke(session, new ConnectionStateEventArgs(session.Id, true));
         }
 
         protected override void OnDisconnected(TcpSession session)
         {
-            OnSessionDisconnected?.Invoke(session, new ConnectionStateEventArgs(session.Id, false));
+            OnServerSessionDisconnected?.Invoke(session, new ConnectionStateEventArgs(session.Id, false));
         }
 
         protected override void OnError(SocketError error)

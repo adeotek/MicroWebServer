@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using Adeotek.MicroWebServer.WebSocket;
 using Microsoft.Extensions.Logging;
 
@@ -23,7 +24,7 @@ namespace Adeotek.MicroWebServer.WebSocketExample
 
             // Create a new WebSocket server
             var server = new WebSocketServer(
-                ipAddress: "127.0.0.1",
+                ipAddress: IPAddress.Any.ToString(),
                 port: 8080,
                 messageConsumerMethod: ProcessWebRequest,
                 logger: _logger
@@ -54,7 +55,8 @@ namespace Adeotek.MicroWebServer.WebSocketExample
         static void ProcessWebRequest(WsSession session, string message)
         {
             _logger.LogInformation("Message received from [{id}]: {msg}", session.Id, message);
-            session.SendAsync(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            var response = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            session.SendAsync(response);
         }
     }
 }
